@@ -1,0 +1,28 @@
+#Everything to be ignored by git
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+# Virtual environment
+.venv/
+venv/
+env/
+# Environment variables and secrets
+.env
+.env.*
+# Keep an example environment file if you create one
+!.env.example
+# Django local files
+db.sqlite3
+db.sqlite3-journal
+media/
+# Test and coverage files
+.coverage
+htmlcov/
+.pytest_cache/
+# IDE settings
+.vscode/
+.idea/
+# Operating system files
+.DS_Store
+Thumbs.db
