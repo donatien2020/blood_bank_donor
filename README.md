@@ -20,3 +20,5 @@ python3 manage.py migrate
 ### 5. Start the development server
 python3 manage.py runserver
 ## Open http://127.0.0.1:8000/ from the browser
+# Create a supper user
+python3 manage.py createsuperuser
