@@ -1,22 +1,6 @@
 from django.db import models
 
 # Create your models here.
-"""
-Blood Bank and Donor Management System
-Django data models based on the Group 2 System Analysis and Design document.
-
-Apps:
-    donors: Donor, DonationCampaign, Donation
-    inventory: Institution, BloodUnit, BloodRequest, IssuedUnit, StockThreshold
-
-Notes:
-- The design follows the document's data dictionary and business rules.
-- Model.clean() enforces cross-field/business validation when full_clean() is called.
-  Django does not automatically call full_clean() on model.save(); save() below invokes it.
-- In service workflows, use transaction.atomic() when creating a collected Donation and its
-  BloodUnit, and when issuing/reversing units.
-- Blood compatibility is exact blood-group/component matching in version 1, as specified.
-"""
 
 from datetime import date, timedelta
 import re
