@@ -81,21 +81,28 @@
                     </li>
 
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
+                        <a href="{% url 'donor_list' %}" class="nav-link">
                             <i class="nav-icon bi bi-people"></i>
                             <p>Blood Donors</p>
                         </a>
                     </li>
+                  <li class="nav-item">
+                    <a href="{% url 'campaign_list' %}" class="nav-link">
+                      <i class="nav-icon bi bi-droplet-fill"></i>
+                      <p>Donations Campaigns</p>
+                    </a>
+                  </li>
+
+
+                  <li class="nav-item">
+                    <a href="{% url 'donation_list' %}" class="nav-link">
+                      <i class="nav-icon fas fa-hand-holding-water text-danger"></i>
+                      <p>Blood Donations</p>
+                    </a>
+                  </li>
 
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon bi bi-droplet"></i>
-                            <p>Blood Donations</p>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="#" class="nav-link">
+                        <a href="{% url 'request_list' %}" class="nav-link">
                             <i class="nav-icon bi bi-hospital"></i>
                             <p>Blood Requests</p>
                         </a>

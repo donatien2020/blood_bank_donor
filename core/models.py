@@ -81,3 +81,26 @@ class Institution(models.Model):
     def __str__(self):
         return self.name
 
+from django.conf import settings
+from django.db import models
+
+
+class InstitutionMembership(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="institution_membership",
+    )
+
+    institution = models.ForeignKey(
+        Institution,
+        on_delete=models.PROTECT,
+        related_name="staff_members",
+    )
+
+    class Meta:
+        verbose_name = "Institution Membership"
+        verbose_name_plural = "Institution Memberships"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.institution.name}"

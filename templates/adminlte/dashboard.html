@@ -1,0 +1,146 @@
+{% extends 'adminlte/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0 text-dark">System Analytics Dashboard</h1>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <!-- Threshold Violations / Low Stock Alert Panel -->
+    {% if low_stock_alerts %}
+    <div class="row">
+      <div class="col-12">
+        <div class="alert alert-danger alert-dismissible">
+          <h5><i class="icon fas fa-ban"></i> CRITICAL LOW STOCK WARNING DETECTED</h5>
+          <ul class="mb-0">
+            {% for alert in low_stock_alerts %}
+            <li>Blood Group <strong>{{ alert.blood_group }}</strong> falls below safe operational reserves! Current: {{ alert.current }} units (Minimum Required: {{ alert.minimum }}).</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Operational Metrics Summary Row -->
+    <div class="row">
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+          <div class="inner">
+            <h3>{{ total_donors }}</h3>
+            <p>Registered Active Donors</p>
+          </div>
+          <div class="icon"><i class="fas fa-users"></i></div>
+          <a href="{% url 'donor_list' %}" class="small-box-footer">View Details <i class="fas fa-arrow-circle-right"></i></a>
+        </div>
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+          <div class="inner">
+            <h3>{{ donations_this_month }}</h3>
+            <p>Collections This Month</p>
+          </div>
+          <div class="icon"><i class="fas fa-heartbeat"></i></div>
+          <a href="#" class="small-box-footer">View Registries <i class="fas fa-arrow-circle-right"></i></a>
+        </div>
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+          <div class="inner">
+            <h3>{{ available_units }}</h3>
+            <p>Available Screened Units</p>
+          </div>
+          <div class="icon"><i class="fas fa-database"></i></div>
+          <a href="#" class="small-box-footer">Stock Repositories <i class="fas fa-arrow-circle-right"></i></a>
+        </div>
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+          <div class="inner">
+            <h3>{{ pending_requests }}</h3>
+            <p>Active Pending Demands</p>
+          </div>
+          <div class="icon"><i class="fas fa-ambulance"></i></div>
+          <a href="{% url 'request_list' %}" class="small-box-footer">Resolve Requests <i class="fas fa-arrow-circle-right"></i></a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Charts Row -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title">Stock Volume Metrics per Blood Group</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="stockBarChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card card-info">
+          <div class="card-header">
+            <h3 class="card-title">Recent Operational Events</h3>
+          </div>
+          <div class="card-body table-responsive p-0" style="height: 250px;">
+            <table class="table table-head-fixed text-nowrap">
+              <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Blood Type</th>
+                <th>Quantity</th>
+                <th>Status</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for req in recent_requests %}
+              <tr>
+                <td>{{ req.request_number }}</td>
+                <td><span class="badge badge-info">{{ req.blood_group }}</span></td>
+                <td>{{ req.quantity_units }}</td>
+                <td><span class="badge badge-secondary">{{ req.get_status_display }}</span></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center text-muted">No historical demand rows stored.</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- AdminLTE Embedded Charting Controls -->
+<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    var ctx = document.getElementById('stockBarChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: {{ stock_labels|safe }},
+    datasets: [{
+      label: 'Units Available',
+      backgroundColor: '#007bff',
+      data: {{ stock_data|safe }}
+  }]
+  },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+  });
+</script>
+{% endblock %}
+

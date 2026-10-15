@@ -240,7 +240,7 @@ class BloodRequest(models.Model):
             errors["required_by"] = "Required-by date cannot be earlier than the request date."
         if self.quantity_units is not None and self.quantity_units < 1:
             errors["quantity_units"] = "Quantity must be at least one unit."
-        if self.institution_id and not self.institution.is_active:
+        if self.requestor_id and not self.requestor.is_active:
             errors["institution"] = "An inactive institution cannot submit a new request."
         if self.status in (BloodRequestStatus.REJECTED, BloodRequestStatus.CANCELLED) and self.issued_units.exists():
             errors["status"] = "A request with issued units cannot be rejected or cancelled."
@@ -267,7 +267,7 @@ class BloodRequest(models.Model):
                 self.save(update_fields=["status"])
 
     def __str__(self):
-        return f"{self.request_number} — {self.institution.name}"
+        return f"{self.request_number} — {self.requestor.name}"
 
 
 class IssuedUnit(models.Model):

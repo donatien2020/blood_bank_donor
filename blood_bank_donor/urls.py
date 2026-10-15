@@ -16,11 +16,15 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
-from core.views import dashboard,dashboardV1,dashboardV2,dashboardV3
+from django.urls import path, include
 
+import donors
+from core.views import dashboard,dashboardV1,dashboardV2,dashboardV3
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", include('core.urls')),
+    path("donors/", include('donors.urls')),
+    path("inventory/", include('inventory.urls')),
     path("dashboard/", dashboard, name="dashboard"),
     path(
         'dashboard/index.html',
