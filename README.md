@@ -22,3 +22,4 @@ python3 manage.py runserver
 ## Open http://127.0.0.1:8000/ from the browser
 # Create a supper user
 python3 manage.py createsuperuser
+i am testing pushing and merge
