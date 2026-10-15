@@ -1,0 +1,77 @@
+{% extends 'adminlte/base.html' %}
+
+{% block content %}
+<section class="content-header">
+  <div class="container-fluid">
+    <h1>Issue Stock Allocation: {{ blood_request.request_number }}</h1>
+  </div>
+</section>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+
+      <!-- Target Constraints Metadata Column -->
+      <div class="col-md-4">
+        <div class="card card-dark">
+          <div class="card-header"><h5>Target Requirements</h5></div>
+          <div class="card-body">
+            <p><strong>Requesting Institution:</strong>
+              {% if blood_request.requestor %}{{ blood_request.requestor.name }}{% else %}{{ blood_request.institution.name }}{% endif %}</p>
+            <p><strong>Required Group:</strong> <span class="badge badge-danger">{{ blood_request.blood_group }}</span></p>
+            <p><strong>Component Profile:</strong> {{ blood_request.get_component_display }}</p>
+            <p><strong>Fulfilled Units:</strong> {{ blood_request.issued_count }} / {{ blood_request.quantity_units }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Verification Checklist -->
+      <div class="col-md-8">
+        <form method="POST" action="{% url 'process_issuance' blood_request.pk %}">
+          {% csrf_token %}
+          <div class="card card-primary">
+            <div class="card-header"><h5>Select Matching Screened Stock Items</h5></div>
+            <div class="card-body table-responsive p-0">
+              <table class="table table-hover">
+                <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Unit ID</th>
+                  <th>Collection Date</th>
+                  <th>Expiration Threshold</th>
+                  <th>Storage Sector</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for unit in matching_units %}
+                <tr>
+                  <td>
+                    <input type="checkbox" name="selected_units" value="{{ unit.id }}"
+                           {% if blood_request.remaining_quantity <= 0 %}disabled{% endif %}>
+                  </td>
+                  <td>{{ unit.unit_number }}</td>
+                  <td>{{ unit.collection_date }}</td>
+                  <td>{{ unit.expiry_date }}</td>
+                  <td><span class="badge badge-warning">{{ unit.storage_location }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted">No compatible inventory options are currently available.</td></tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="card-footer">
+              <button type="submit" class="btn btn-success float-right" {% if blood_request.remaining_quantity <= 0 or not matching_units %}disabled{% endif %}>
+              Confirm Allocation Pipeline
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block main_content %}{% block content %}{% endblock %}{% endblock %}

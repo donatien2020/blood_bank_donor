@@ -1,0 +1,119 @@
+
+{% extends 'adminlte/base.html' %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Blood Donor Registry</h1>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <!-- Filtering Dashboard Card -->
+    <div class="card card-outline card-primary">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-search mr-1"></i> Filter Registry</h3>
+      </div>
+      <div class="card-body">
+        <form method="GET" action="">
+          <div class="row">
+            <div class="col-md-4">
+              <input type="text" name="search" class="form-control" placeholder="Search Name or National ID..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+              <select name="blood_group" class="form-control">
+                <option value="">-- All Blood Types --</option>
+                <option value="A+" {% if request.GET.blood_group == 'A+' %}selected{% endif %}>A+</option>
+                <option value="A-" {% if request.GET.blood_group == 'A-' %}selected{% endif %}>A-</option>
+                <option value="B+" {% if request.GET.blood_group == 'B+' %}selected{% endif %}>B+</option>
+                <option value="B-" {% if request.GET.blood_group == 'B-' %}selected{% endif %}>B-</option>
+                <option value="AB+" {% if request.GET.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+                <option value="AB-" {% if request.GET.blood_group == 'AB-' %}selected{% endif %}>AB-</option>
+                <option value="O+" {% if request.GET.blood_group == 'O+' %}selected{% endif %}>O+</option>
+                <option value="O-" {% if request.GET.blood_group == 'O-' %}selected{% endif %}>O-</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <input type="text" name="district" class="form-control" placeholder="District..." value="{{ request.GET.district }}">
+            </div>
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main Data Table Container -->
+    <div class="card">
+      <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+          <thead class="bg-light">
+          <tr>
+            <th>Donor Name</th>
+            <th>National ID</th>
+            <th>Blood Group</th>
+            <th>Gender</th>
+            <th>District</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for donor in donors %}
+          <tr>
+            <td><strong>{{ donor.first_name }} {{ donor.last_name }}</strong></td>
+            <td><code>{{ donor.national_id }}</code></td>
+            <td><span class="badge badge-danger">{{ donor.blood_group }}</span></td>
+            <td>{{ donor.get_gender_display }}</td>
+            <td>{{ donor.district }}</td>
+            <td>
+              {% if donor.is_active %}
+              <span class="badge badge-success">Active</span>
+              {% else %}
+              <span class="badge badge-secondary">Suspended</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'donor_profile' donor.pk %}" class="btn btn-sm btn-info">
+                <i class="fas fa-eye"></i> Profile
+              </a>
+              <a href="{% url 'donation_add' %}?donor={{ donor.pk }}" class="btn btn-sm btn-success">
+                <i class="fas fa-plus"></i> Collect Blood
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">No donor registries found matching the filter parameters.</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Safe Pagination Controllers -->
+      {% if is_paginated %}
+      <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+          {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+          {% endif %}
+          <li class="page-item active"><a class="page-link" href="#">{{ page_obj.number }}</a></li>
+          {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+{% endblock %}

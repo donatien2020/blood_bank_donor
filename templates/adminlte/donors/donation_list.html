@@ -1,0 +1,101 @@
+{% extends 'adminlte/base.html' %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Donation Logs & Blood Units Inventory</h1>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <!-- Summary Messages Bar -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible">
+      <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+      {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="card card-outline card-danger shadow">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-heartbeat mr-2 text-danger"></i> Complete Historical Intake Transactions</h3>
+        <div class="card-tools">
+          <a href="{% url 'donation_add' %}" class="btn btn-sm btn-success">
+            <i class="fas fa-plus-circle mr-1"></i> Register New Collection Unit
+          </a>
+        </div>
+      </div>
+
+      <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+          <thead class="bg-dark">
+          <tr>
+            <th>ID</th>
+            <th>Donor Registry</th>
+            <th>Campaign Drive</th>
+            <th>Date Collected</th>
+            <th>Vitals (Hb)</th>
+            <th>Volume (ml)</th>
+            <th>Outcome Status</th>
+            <th>Inventory Link</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for donation in donations %}
+          <tr>
+            <td><code>#{{ donation.id }}</code></td>
+            <td><strong>{{ donation.donor.first_name }} {{ donation.donor.last_name }}</strong></td>
+            <td>{{ donation.campaign.name|default:"Walk-in Donation" }}</td>
+            <td>{{ donation.donation_date }}</td>
+            <td>{{ donation.hemoglobin_g_dl }} g/dL</td>
+            <td>{{ donation.volume_ml }} ml</td>
+            <td>
+              {% if donation.outcome == 'COLLECTED' %}
+              <span class="badge badge-success"><i class="fas fa-check"></i> Collected</span>
+              {% else %}
+              <span class="badge badge-danger" title="{{ donation.deferral_reason }}"><i class="fas fa-ban"></i> Deferred</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if donation.blood_unit %}
+              <span class="badge badge-info"><i class="fas fa-box"></i> {{ donation.blood_unit.unit_number }}</span>
+              {% else %}
+              <span class="text-muted small">No unit (Deferred)</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No historical donation transactional logs found.</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if is_paginated %}
+      <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+          {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+          {% endif %}
+          <li class="page-item active"><a class="page-link" href="#">{{ page_obj.number }}</a></li>
+          {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+{% endblock %}
