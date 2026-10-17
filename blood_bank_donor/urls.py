@@ -21,23 +21,9 @@ from django.urls import path, include
 import donors
 from core.views import dashboard,dashboardV1,dashboardV2,dashboardV3
 urlpatterns = [
-    path("admin/", admin.site.urls),
     path("", include('core.urls')),
+    path("admin/", admin.site.urls),
     path("donors/", include('donors.urls')),
     path("inventory/", include('inventory.urls')),
-    path("dashboard/", dashboard, name="dashboard"),
-    path(
-        'dashboard/index.html',
-        dashboardV1,
-        name='adminLteDashboard V1'
-    ),
-    path(
-        'dashboard/index2.html',
-        dashboardV2,
-        name='adminLteDashboardV2'
-    ),path(
-        'dashboard/index3.html',
-        dashboardV3,
-        name='adminLteDashboardV3'
-    ),
+
 ]

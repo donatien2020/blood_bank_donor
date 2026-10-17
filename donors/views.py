@@ -9,17 +9,9 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import ListView
-
-
-try:
-    from donors.models import Donation, Donor, DonationCampaign
-except ImportError:
-    from apps.donors.models import Donation, Donor, DonationCampaign
-
-try:
-    from donors.models import Donor, Donation, DonationCampaign, DonationOutcome
-except ImportError:
-    from apps.donors.models import Donor, Donation, DonationCampaign, DonationOutcome
+from donors.models import Donation, Donor, DonationCampaign,DonationOutcome
+from django.contrib.auth.decorators import login_required
+from donors.models import BloodUnit
 
 class DonorListView(LoginRequiredMixin, ListView):
     model = Donor
@@ -57,6 +49,39 @@ class DonorDetailView(LoginRequiredMixin, DetailView):
         context["is_eligible"] = donor.is_eligible_on(timezone.localdate())
         return context
 
+
+class DonorCreateView(LoginRequiredMixin, CreateView):
+    model = Donor
+    fields = [
+        'national_id', 'first_name', 'last_name', 'gender',
+        'date_of_birth', 'blood_group', 'phone', 'email',
+        'district', 'address', 'weight_kg', 'is_active'
+    ]
+    template_name = "adminlte/donors/donor_form.html"
+    success_url = reverse_lazy('donor_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Donor {form.instance.first_name} registered successfully!")
+        return super().form_valid(form)
+
+
+class DonorUpdateView(LoginRequiredMixin, UpdateView):
+    model = Donor
+    fields = [
+        'national_id', 'first_name', 'last_name', 'gender',
+        'date_of_birth', 'blood_group', 'phone', 'email',
+        'district', 'address', 'weight_kg', 'is_active'
+    ]
+    template_name = "adminlte/donors/donor_form.html"
+
+    def get_success_url(self):
+        # Redirect directly back to their file summary page upon updates
+        return reverse_lazy('donor_profile', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Donor file for {form.instance.first_name} updated successfully.")
+        return super().form_valid(form)
+
 class DonationCreateView(LoginRequiredMixin, CreateView):
     model = Donation
     fields = ['donor', 'campaign', 'donation_date', 'outcome', 'volume_ml', 'hemoglobin_g_dl', 'systolic_bp', 'diastolic_bp', 'deferral_reason', 'notes']
@@ -67,7 +92,7 @@ class DonationCreateView(LoginRequiredMixin, CreateView):
         initial = super().get_initial()
         donor_id = self.request.GET.get('donor')
         if donor_id:
-            initial['donor'] = get_object_or_0_404(Donor, pk=donor_id)
+            initial['donor'] = get_object_or_404(Donor, pk=donor_id)
         return initial
 
     def form_valid(self, form):
@@ -96,3 +121,48 @@ class DonationListView(LoginRequiredMixin, ListView):
     ordering = ["-donation_date", "-id"]
 
 
+
+class CampaignCreateView(LoginRequiredMixin, CreateView):
+    model = DonationCampaign
+    fields = [
+        'institution', 'name', 'location', 'district',
+        'start_date', 'end_date', 'target_units',
+        'organizer', 'status', 'description'
+    ]
+    template_name = "adminlte/donors/campaign_form.html"
+    success_url = reverse_lazy('campaign_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Campaign '{form.instance.name}' has been planned successfully!")
+        return super().form_valid(form)
+
+
+class CampaignUpdateView(LoginRequiredMixin, UpdateView):
+    model = DonationCampaign
+    fields = [
+        'institution', 'name', 'location', 'district',
+        'start_date', 'end_date', 'target_units',
+        'organizer', 'status', 'description'
+    ]
+    template_name = "adminlte/donors/campaign_form.html"
+    success_url = reverse_lazy('campaign_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Campaign '{form.instance.name}' configuration updated.")
+        return super().form_valid(form)
+
+@login_required
+def clear_blood_unit(request, pk):
+    # Locate the blood unit package safely
+    unit = get_object_or_404(BloodUnit, pk=pk)
+
+    if unit.test_result == 'PENDING':
+        unit.test_result = 'CLEARED'
+        unit.status = 'AVAILABLE'
+        unit.save(update_fields=['test_result', 'status'])
+        messages.success(request, f"Blood Unit {unit.unit_number} has been successfully cleared and moved to available stock inventory.")
+    else:
+        messages.info(request, f"Blood Unit {unit.unit_number} is already processed.")
+
+    # Redirect cleanly straight back to the historical logs dashboard page
+    return redirect('donation_list')

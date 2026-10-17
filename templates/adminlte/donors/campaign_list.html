@@ -1,86 +1,87 @@
 {% extends 'adminlte/base.html' %}
-
 {% block content %}
 <div class="content-header">
   <div class="container-fluid">
-    <div class="row mb-2">
+    <div class="row mb-2 align-items-center">
       <div class="col-sm-6">
-        <h1 class="m-0">Donation Drives & Campaigns</h1>
+        <h1 class="m-0 text-dark"><i class="fas fa-bullhorn mr-2"></i>Donation Drives & Campaigns</h1>
       </div>
-      <div class="col-sm-6">
-        <a href="{% url 'donation_add' %}" class="btn btn-danger float-sm-right">
-          <i class="fas fa-plus-circle mr-1"></i> Record Quick Walk-In Donation
+      <!-- Missing Action Buttons Added Below -->
+      <div class="col-sm-6 text-right">
+        <a href="{% url 'campaign_add' %}" class="btn btn-success elevation-2 mr-2">
+          <i class="fas fa-plus mr-1"></i> Add New Campaign
+        </a>
+        <a href="{% url 'donation_add' %}" class="btn btn-secondary elevation-2">
+          <i class="fas fa-tint mr-1"></i> Record Quick Walk-In Donation
         </a>
       </div>
     </div>
   </div>
 </div>
 
-<section class="content">
-  <div class="container-fluid">
-
-    <div class="card card-outline card-danger shadow">
-      <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-bullseye mr-2 text-danger"></i> Collection Drives Tracker</h3>
-      </div>
-      <div class="card-body table-responsive p-0">
-        <table class="table table-hover text-nowrap">
-          <thead class="bg-dark">
-          <tr>
-            <th>Campaign Drive Name</th>
-            <th>Responsible Institution</th>
-            <th>Operational Status</th>
-            <th>Timeline Window</th>
-            <th>Target Units</th>
-            <th>Collected Progress</th>
-            <th>Action Desk</th>
-          </tr>
-          </thead>
-          <tbody>
-          {% for campaign in campaigns %}
-          <tr>
-            <td><strong>{{ campaign.name }}</strong><br><small class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ campaign.location }} ({{ campaign.district }})</small></td>
-            <td>{{ campaign.institution.name }}</td>
-            <td>
-              {% if campaign.status == 'ONGOING' %}
-              <span class="badge badge-success animate-pulse">Ongoing</span>
-              {% elif campaign.status == 'PLANNED' %}
-              <span class="badge badge-primary">Planned</span>
-              {% elif campaign.status == 'COMPLETED' %}
-              <span class="badge badge-secondary">Completed</span>
-              {% else %}
-              <span class="badge badge-danger">Cancelled</span>
-              {% endif %}
-            </td>
-            <td><code>{{ campaign.start_date }}</code> to <code>{{ campaign.end_date }}</code></td>
-            <td><h5><span class="badge badge-dark">{{ campaign.target_units }} Units</span></h5></td>
-            <td style="vertical-align: middle; width: 25%;">
-              <!-- Progress Percentage bar computed straight out of your model code logic -->
-              <div class="progress progress-xs mb-1">
-                <div class="progress-bar bg-danger" style="width: {{ campaign.progress_percent }}%"></div>
-              </div>
-              <small class="text-bold text-dark">{{ campaign.collected_units }} units collected ({{ campaign.progress_percent }}%)</small>
-            </td>
-            <td>
-              {% if campaign.status == 'ONGOING' or campaign.status == 'PLANNED' %}
-              <a href="{% url 'donation_add' %}?campaign={{ campaign.id }}" class="btn btn-xs btn-danger shadow-sm">
-                <i class="fas fa-plus mr-1"></i> Intake Donor
-              </a>
-              {% else %}
-              <button class="btn btn-xs btn-secondary" disabled>Locked</button>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="7" class="text-center text-muted py-4">No active or historical donation campaigns stored in system files. Create one inside Django Admin.</td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
+<div class="card card-outline card-primary">
+  <div class="card-header">
+    <h3 class="card-title">Collection Drives Tracker</h3>
   </div>
-</section>
+  <div class="card-body p-0">
+    <table class="table table-striped table-hover m-0">
+      <thead>
+      <tr>
+        <th>Campaign Drive Name</th>
+        <th>Responsible Institution</th>
+        <th>Operational Status</th>
+        <th>Timeline Window</th>
+        <th>Target Units</th>
+        <th>Collected Progress</th>
+        <th class="text-center">Action Desk</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for campaign in campaigns %}
+      <tr>
+        <td><strong>{{ campaign.name }}</strong><br><small class="text-muted">{{ campaign.location }} ({{ campaign.district }})</small></td>
+        <td>{{ campaign.institution.name }}</td>
+        <td>
+          {% if campaign.status == 'ONGOING' %}
+          <span class="badge badge-success">Ongoing</span>
+          {% elif campaign.status == 'PLANNED' %}
+          <span class="badge badge-info">Planned</span>
+          {% elif campaign.status == 'COMPLETED' %}
+          <span class="badge badge-secondary">Completed</span>
+          {% else %}
+          <span class="badge badge-danger">Cancelled</span>
+          {% endif %}
+        </td>
+        <td><code>{{ campaign.start_date }}</code> to <code>{{ campaign.end_date }}</code></td>
+        <td><h5>{{ campaign.target_units }} Units</h5></td>
+        <td>
+          <div class="progress progress-sm">
+            <div class="progress-bar bg-red" role="progressbar" style="width: {{ campaign.progress_percent }}%"></div>
+          </div>
+          <small>{{ campaign.collected_units }} units collected ({{ campaign.progress_percent }}%)</small>
+        </td>
+        <td class="text-center">
+          <div class="btn-group">
+            {% if campaign.status == 'ONGOING' or campaign.status == 'PLANNED' %}
+            <a href="{% url 'donation_add' %}?campaign={{ campaign.pk }}" class="btn btn-sm btn-danger">
+              <i class="fas fa-user-plus mr-1"></i> Intake Donor
+            </a>
+            {% endif %}
+            <a href="{% url 'campaign_edit' campaign.pk %}" class="btn btn-sm btn-warning">
+              <i class="fas fa-edit mr-1"></i> Edit
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted p-4">
+          No active or historical donation campaigns stored in system files.
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

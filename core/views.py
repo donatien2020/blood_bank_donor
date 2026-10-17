@@ -3,8 +3,6 @@ from django.shortcuts import render
 # Create your views here.
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-
-
 from django.shortcuts import render, redirect
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -13,7 +11,11 @@ from django.utils import timezone
 from django.db.models import Count, Sum, Q
 from datetime import timedelta
 
-# Flexible imports to support varied app configurations
+from django.views.generic import ListView, CreateView, UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.contrib import messages
+from core.models import Institution
 try:
     from donors.models import Donor, Donation, DonationCampaign, DonationOutcome
     from inventory.models import BloodUnit, BloodRequest, IssuedUnit, StockThreshold, BloodRequestStatus, BloodUnitStatus, LabTestResult
@@ -104,6 +106,43 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 class SystemLoginView(LoginView):
     template_name = "adminlte/login.html"
     redirect_authenticated_user = True
+
+
+
+class InstitutionListView(LoginRequiredMixin, ListView):
+    model = Institution
+    template_name = "adminlte/core/institution_list.html"
+    context_object_name = "institutions"
+    paginate_by = 10
+    ordering = ["name"]
+
+class InstitutionCreateView(LoginRequiredMixin, CreateView):
+    model = Institution
+    fields = [
+        'name', 'institution_type', 'institution_category',
+        'district', 'address', 'contact_person', 'phone',
+        'email', 'is_active'
+    ]
+    template_name = "adminlte/core/institution_form.html"
+    success_url = reverse_lazy('institution_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Institution '{form.instance.name}' registered successfully!")
+        return super().form_valid(form)
+
+class InstitutionUpdateView(LoginRequiredMixin, UpdateView):
+    model = Institution
+    fields = [
+        'name', 'institution_type', 'institution_category',
+        'district', 'address', 'contact_person', 'phone',
+        'email', 'is_active'
+    ]
+    template_name = "adminlte/core/institution_form.html"
+    success_url = reverse_lazy('institution_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Institution parameters updated for '{form.instance.name}'.")
+        return super().form_valid(form)
 
 
 
