@@ -5,7 +5,7 @@ from .views import (
     BloodRequestCreateView,
     BloodRequestUpdateView,
     IssueUnitsView,
-    process_issuance
+    process_issuance,remove_issued_unit
 )
 
 urlpatterns = [
@@ -14,6 +14,8 @@ urlpatterns = [
     path('inventory/requests/<int:pk>/edit/', BloodRequestUpdateView.as_view(), name='request_edit'),
     path('inventory/requests/<int:pk>/issue/', IssueUnitsView.as_view(), name='issue_units'),
     path('inventory/requests/<int:pk>/process/', process_issuance, name='process_issuance'),
+    path('inventory/issued/<int:pk>/remove/', remove_issued_unit, name='remove_issued_unit'),
+
 ]
 
 

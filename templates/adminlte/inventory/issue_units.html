@@ -7,7 +7,7 @@
 </div>
 
 <div class="row">
-  <!-- Target Requirements Panel -->
+  <!-- Target Requirements Panel (Left Side Column) -->
   <div class="col-md-4">
     <div class="card card-dark">
       <div class="card-header">
@@ -29,11 +29,33 @@
           </div>
         </div>
         <p class="text-muted"><i class="fas fa-info-circle mr-1"></i> You can allocate up to **{{ blood_request.remaining_quantity }}** more units.</p>
+
+        <!-- 🌟 LIST 1: Displaying units ALREADY ALLOCATED to this specific request -->
+        {% if blood_request.issued_units.exists %}
+        <div class="border-top pt-3 mt-3">
+          <h6><i class="fas fa-check-square text-success mr-1"></i> Currently Allocated Units:</h6>
+          <ul class="list-group list-group-unbordered mt-2">
+            {% for allocation in blood_request.issued_units.all %}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                  <span>
+                    <i class="fas fa-barcode text-muted mr-1"></i>
+                    <strong>{{ allocation.blood_unit.unit_number }}</strong>
+                  </span>
+              <!-- 🌟 FIXED: Passes allocation.id (the IssuedUnit primary key) cleanly to the removal route -->
+              <a href="{% url 'remove_issued_unit' allocation.id %}" class="btn btn-xs btn-danger" onclick="return confirm('Are you sure you want to de-allocate this unit and return it to stock?');">
+                <i class="fas fa-trash-alt mr-1"></i> Remove
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
       </div>
     </div>
   </div>
 
-  <!-- Available Screened Stock Panel -->
+  <!-- Available Screened Stock Panel (Right Side Column) -->
   <div class="col-md-8">
     <form method="POST" action="{% url 'process_issuance' blood_request.pk %}" id="issuanceForm">
       {% csrf_token %}
@@ -53,6 +75,7 @@
             </tr>
             </thead>
             <tbody>
+            <!-- 🌟 LIST 2: Loop handling AVAILABLE blood stocks using the 'unit' iterator -->
             {% for unit in matching_units %}
             <tr>
               <td class="text-center">
@@ -90,7 +113,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Enforcement script preventing staff from choosing more units than remaining open slot cap -->
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     var maxAllowed = parseInt(document.getElementById("remaining-limit").getAttribute("data-limit"));

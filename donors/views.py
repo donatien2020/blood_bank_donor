@@ -166,3 +166,30 @@ def clear_blood_unit(request, pk):
 
     # Redirect cleanly straight back to the historical logs dashboard page
     return redirect('donation_list')
+
+
+
+@login_required
+def delete_donation_session(request, pk):
+    donation = get_object_or_404(Donation, pk=pk)
+
+    # Safety Check: Stop execution if the blood unit was already dispatched to a hospital
+    if hasattr(donation, 'blood_unit') and donation.blood_unit.status == 'ISSUED':
+        messages.error(request, "CRITICAL ERROR: Cannot cancel this session. The related blood unit has already been issued to a hospital request.")
+        return redirect('donation_list')
+
+    try:
+        with transaction.atomic():
+            # 1. Manually drop the protected blood unit record row first
+            if hasattr(donation, 'blood_unit'):
+                donation.blood_unit.delete()
+
+            # 2. Safely wipe the core session logs row second
+            donation.delete()
+
+        messages.success(request, "Donation session record and its matching inventory unit were successfully deleted.")
+    except Exception as e:
+        messages.error(request, f"Database transaction fault: {e}")
+
+    return redirect('donation_list')
+
