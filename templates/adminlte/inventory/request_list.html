@@ -1,85 +1,100 @@
 {% extends 'adminlte/base.html' %}
-
 {% block content %}
 <div class="content-header">
   <div class="container-fluid">
-    <div class="row mb-2">
+    <div class="row mb-2 align-items-center">
       <div class="col-sm-6">
-        <h1 class="m-0">Hospital Blood Requests</h1>
+        <h1 class="m-0 text-dark"><i class="fas fa-heartbeat text-danger mr-2"></i>Hospital Blood Requests</h1>
+      </div>
+      <!-- Missing Creation Button Added Below -->
+      <div class="col-sm-6 text-right">
+        <a href="{% url 'request_add' %}" class="btn btn-primary elevation-2">
+          <i class="fas fa-plus mr-1"></i> Submit New Blood Request
+        </a>
       </div>
     </div>
   </div>
 </div>
 
-<section class="content">
-  <div class="container-fluid">
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-success alert-dismissible">
+  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+  <i class="icon fas fa-check"></i> {{ message }}
+</div>
+{% endfor %}
+{% endif %}
 
-    <div class="card card-outline card-danger shadow">
-      <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-ambulance mr-2 text-danger"></i> Incoming Institutional Requests</h3>
-      </div>
-      <div class="card-body table-responsive p-0">
-        <table class="table table-hover text-nowrap">
-          <thead class="bg-dark">
-          <tr>
-            <th>Request Number</th>
-            <th>Requestor Institution</th>
-            <th>Required Type / Component</th>
-            <th>Requested Qty</th>
-            <th>Urgency Status</th>
-            <th>Required By Date</th>
-            <th>Fulfillment Status</th>
-            <th>Action Panel</th>
-          </tr>
-          </thead>
-          <tbody>
-          {% for req in requests %}
-          <tr>
-            <td><code>{{ req.request_number }}</code></td>
-            <td><strong>{% if req.requestor %}{{ req.requestor.name }}{% else %}{{ req.institution.name }}{% endif %}</strong></td>
-            <td><span class="badge badge-danger">{{ req.blood_group }}</span> — {{ req.get_component_display }}</td>
-            <td><strong>{{ req.issued_count }}</strong> / {{ req.quantity_units }} Units</td>
-            <td>
-              {% if req.urgency == 'EMERGENCY' %}
-              <span class="badge badge-danger animate-pulse"><i class="fas fa-exclamation-triangle"></i> EMERGENCY</span>
-              {% elif req.urgency == 'URGENT' %}
-              <span class="badge badge-warning">URGENT</span>
-              {% else %}
-              <span class="badge badge-info">Routine</span>
-              {% endif %}
-            </td>
-            <td><span class="text-bold text-dark">{{ req.required_by }}</span></td>
-            <td>
-              {% if req.status == 'FULFILLED' %}
-              <span class="badge badge-success">Fulfilled</span>
-              {% elif req.status == 'PARTIAL' %}
-              <span class="badge badge-warning">Partially Fulfilled</span>
-              {% elif req.status == 'PENDING' %}
-              <span class="badge badge-primary">Pending</span>
-              {% else %}
-              <span class="badge badge-secondary">{{ req.get_status_display }}</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if req.status in 'PENDING PARTIAL' %}
-              <a href="{% url 'issue_units' req.pk %}" class="btn btn-sm btn-success shadow-sm">
-                <i class="fas fa-layer-groupmr-1"></i> Allocate Units
-              </a>
-              {% else %}
-              <button class="btn btn-sm btn-secondary" disabled><i class="fas fa-check"></i> Processed</button>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="8" class="text-center text-muted py-4">No incoming hospital blood requests found in history files.</td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
+<div class="card card-outline card-danger">
+  <div class="card-header">
+    <h3 class="card-title"><i class="fas fa-list mr-1"></i> Incoming Institutional Requests</h3>
   </div>
-</section>
+  <div class="card-body p-0">
+    <table class="table table-striped table-hover m-0">
+      <thead>
+      <tr>
+        <th>Request Number</th>
+        <th>Requestor Institution</th>
+        <th>Required Type / Component</th>
+        <th>Requested Qty</th>
+        <th>Urgency Status</th>
+        <th>Required By Date</th>
+        <th>Fulfillment Status</th>
+        <th class="text-center">Action Panel</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for req in requests %}
+      <tr>
+        <td><code>{{ req.request_number }}</code></td>
+        <td><strong>{% if req.requestor %}{{ req.requestor.name }}{% else %}{{ req.institution.name }}{% endif %}</strong></td>
+        <td><span class="badge badge-danger">{{ req.blood_group }}</span> — {{ req.get_component_display }}</td>
+        <td><strong>{{ req.issued_count }}</strong> / {{ req.quantity_units }} Units</td>
+        <td>
+          {% if req.urgency == 'EMERGENCY' %}
+          <span class="badge badge-danger animation__shake">EMERGENCY</span>
+          {% elif req.urgency == 'URGENT' %}
+          <span class="badge badge-warning">URGENT</span>
+          {% else %}
+          <span class="badge badge-secondary">Routine</span>
+          {% endif %}
+        </td>
+        <td><code>{{ req.required_by }}</code></td>
+        <td>
+          {% if req.status == 'FULFILLED' %}
+          <span class="badge badge-success">Fulfilled</span>
+          {% elif req.status == 'PARTIAL' %}
+          <span class="badge badge-info">Partially Fulfilled</span>
+          {% elif req.status == 'PENDING' %}
+          <span class="badge badge-warning">Pending</span>
+          {% else %}
+          <span class="badge badge-secondary">{{ req.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td class="text-center">
+          <div class="btn-group">
+            {% if req.status == 'PENDING' or req.status == 'PARTIAL' %}
+            <a href="{% url 'issue_units' req.pk %}" class="btn btn-sm btn-success">
+              <i class="fas fa-box-open mr-1"></i> Allocate Units
+            </a>
+            {% else %}
+            <span class="badge badge-light text-muted p-2"><i class="fas fa-check-circle mr-1"></i> Processed</span>
+            {% endif %}
+            <a href="{% url 'request_edit' req.pk %}" class="btn btn-sm btn-warning" title="Edit Request Parameters">
+              <i class="fas fa-edit"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center text-muted p-4">
+          No incoming hospital blood requests found in history files.
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'adminlte/base.html' %}
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <h1 class="m-0 text-dark">
+      <i class="fas fa-heartbeat text-danger mr-2"></i>
+      {% if object %}Modify Blood Request: {{ object.request_number }}{% else %}Submit New Hospital Blood Request{% endif %}
+    </h1>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card {% if object %}card-warning{% else %}card-primary{% endif %}">
+      <div class="card-header">
+        <h3 class="card-title">Hospital Order & Demand Requirements</h3>
+      </div>
+      <form method="POST" action="">
+        {% csrf_token %}
+        <div class="card-body">
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Requesting Institution (Source) *</label>
+              <select name="requestor" class="form-control" required>
+                {% for choice in form.fields.requestor.choices %}
+                <option value="{{ choice.0 }}" {% if form.requestor.value|slugify == choice.0|slugify %}selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Receiving Hub (Destination) *</label>
+              <select name="receiver" class="form-control {% if form.receiver.errors %}is-invalid{% endif %}" required>
+                {% for choice in form.fields.receiver.choices %}
+                <option value="{{ choice.0 }}" {% if form.receiver.value|slugify == choice.0|slugify %}selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+              </select>
+              <small class="text-danger">{{ form.receiver.errors.0 }}</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <label>Requested By Person *</label>
+              <input type="text" name="requested_by" class="form-control" value="{{ form.requested_by.value|default:'' }}" required>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Patient ID / Medical Reference *</label>
+              <input type="text" name="patient_reference" class="form-control" value="{{ form.patient_reference.value|default:'' }}" required>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Required By Date *</label>
+              <input type="date" name="required_by" class="form-control {% if form.required_by.errors %}is-invalid{% endif %}" value="{{ form.required_by.value|slugify|default:'' }}" required>
+              <small class="text-danger">{{ form.required_by.errors.0 }}</small>
+            </div>
+          </div>
+
+          <div class="row border-top pt-3 mt-2">
+            <div class="col-md-4 form-group">
+              <label>Target Blood Group *</label>
+              <select name="blood_group" class="form-control">
+                <option value="A+" {% if form.blood_group.value == "A+" %}selected{% endif %}>A+</option>
+                <option value="A-" {% if form.blood_group.value == "A-" %}selected{% endif %}>A-</option>
+                <option value="B+" {% if form.blood_group.value == "B+" %}selected{% endif %}>B+</option>
+                <option value="B-" {% if form.blood_group.value == "B-" %}selected{% endif %}>B-</option>
+                <option value="AB+" {% if form.blood_group.value == "AB+" %}selected{% endif %}>AB+</option>
+                <option value="AB-" {% if form.blood_group.value == "AB-" %}selected{% endif %}>AB-</option>
+                <option value="O+" {% if form.blood_group.value == "O+" %}selected{% endif %}>O+</option>
+                <option value="O-" {% if form.blood_group.value == "O-" %}selected{% endif %}>O-</option>
+              </select>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Required Component Profile *</label>
+              <select name="component" class="form-control">
+                <option value="WB" {% if form.component.value == "WB" %}selected{% endif %}>Whole blood</option>
+                <option value="RBC" {% if form.component.value == "RBC" %}selected{% endif %}>Red blood cells</option>
+                <option value="PLASMA" {% if form.component.value == "PLASMA" %}selected{% endif %}>Plasma</option>
+                <option value="PLT" {% if form.component.value == "PLT" %}selected{% endif %}>Platelets</option>
+              </select>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Quantity Demanded (Units) *</label>
+              <input type="number" name="quantity_units" class="form-control" value="{{ form.quantity_units.value|default:'1' }}" min="1" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Urgency Priority Scale *</label>
+              <select name="urgency" class="form-control">
+                <option value="ROUTINE" {% if form.urgency.value == "ROUTINE" %}selected{% endif %}>Routine</option>
+                <option value="URGENT" {% if form.urgency.value == "URGENT" %}selected{% endif %}>Urgent</option>
+                <option value="EMERGENCY" {% if form.urgency.value == "EMERGENCY" %}selected{% endif %}>Emergency</option>
+              </select>
+            </div>
+            {% if object %}
+            <div class="col-md-6 form-group">
+              <label>Manual Request Status</label>
+              <select name="status" class="form-control">
+                <option value="PENDING" {% if form.status.value == "PENDING" %}selected{% endif %}>Pending</option>
+                <option value="PARTIAL" {% if form.status.value == "PARTIAL" %}selected{% endif %}>Partially fulfilled</option>
+                <option value="FULFILLED" {% if form.status.value == "FULFILLED" %}selected{% endif %}>Fulfilled</option>
+                <option value="REJECTED" {% if form.status.value == "REJECTED" %}selected{% endif %}>Rejected</option>
+                <option value="CANCELLED" {% if form.status.value == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+              </select>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 form-group">
+              <label>Remarks / Allocation Notes</label>
+              <textarea name="remarks" class="form-control" rows="3">{{ form.remarks.value|default:'' }}</textarea>
+            </div>
+          </div>
+
+        </div>
+        <div class="card-footer text-right">
+          <a href="{% url 'request_list' %}" class="btn btn-default mr-2">Cancel</a>
+          <button type="submit" class="btn {% if object %}btn-warning{% else %}btn-primary{% endif %}">
+            <i class="fas fa-save mr-1"></i> Save Request Orders
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

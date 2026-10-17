@@ -1,0 +1,103 @@
+{% extends 'adminlte/base.html' %}
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <h1 class="m-0 text-dark">
+      <i class="fas fa-bullhorn mr-2"></i>
+      {% if object %}Modify Campaign: {{ object.name }}{% else %}Launch New Donation Campaign{% endif %}
+    </h1>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card {% if object %}card-warning{% else %}card-success{% endif %}">
+      <div class="card-header">
+        <h3 class="card-title">Campaign Parameters & Operational Strategy</h3>
+      </div>
+      <form method="POST" action="">
+        {% csrf_token %}
+        <div class="card-body">
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            <h5><i class="icon fas fa-ban"></i> Validation Error</h5>
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Campaign Drive Name *</label>
+              <input type="text" name="name" class="form-control" value="{{ form.name.value|default:'' }}" required>
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Responsible Blood Bank / Institution *</label>
+              <select name="institution" class="form-control" required>
+                {% for choice in form.fields.institution.choices %}
+                <option value="{{ choice.0 }}" {% if form.institution.value|slugify == choice.0|slugify %}selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <label>District *</label>
+              <input type="text" name="district" class="form-control" value="{{ form.district.value|default:'' }}" required>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Specific Location / Site Venue *</label>
+              <input type="text" name="location" class="form-control" value="{{ form.location.value|default:'' }}" required>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Organizer Name / Coordinator *</label>
+              <input type="text" name="organizer" class="form-control" value="{{ form.organizer.value|default:'' }}" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-3 form-group">
+              <label>Start Date *</label>
+              <input type="date" name="start_date" class="form-control {% if form.start_date.errors %}is-invalid{% endif %}" value="{{ form.start_date.value|slugify|default:'' }}" required>
+              <small class="text-danger">{{ form.start_date.errors.0 }}</small>
+            </div>
+            <div class="col-md-3 form-group">
+              <label>End Date *</label>
+              <input type="date" name="end_date" class="form-control {% if form.end_date.errors %}is-invalid{% endif %}" value="{{ form.end_date.value|slugify|default:'' }}" required>
+              <small class="text-danger">{{ form.end_date.errors.0 }}</small>
+            </div>
+            <div class="col-md-3 form-group">
+              <label>Target Blood Units *</label>
+              <input type="number" name="target_units" class="form-control" value="{{ form.target_units.value|default:'100' }}" min="1" required>
+            </div>
+            <div class="col-md-3 form-group">
+              <label>Operational Status *</label>
+              <select name="status" class="form-control">
+                <option value="PLANNED" {% if form.status.value == "PLANNED" %}selected{% endif %}>Planned</option>
+                <option value="ONGOING" {% if form.status.value == "ONGOING" %}selected{% endif %}>Ongoing</option>
+                <option value="COMPLETED" {% if form.status.value == "COMPLETED" %}selected{% endif %}>Completed</option>
+                <option value="CANCELLED" {% if form.status.value == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 form-group">
+              <label>Detailed Campaign Description / Mission Parameters</label>
+              <textarea name="description" class="form-control" rows="3" placeholder="Enter outreach details, partner targets, logistics plans...">{{ form.description.value|default:'' }}</textarea>
+            </div>
+          </div>
+
+        </div>
+        <div class="card-footer text-right">
+          <a href="{% url 'campaign_list' %}" class="btn btn-default mr-2">Cancel</a>
+          <button type="submit" class="btn {% if object %}btn-warning{% else %}btn-success{% endif %}">
+            <i class="fas fa-save mr-1"></i> Save Campaign parameters
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

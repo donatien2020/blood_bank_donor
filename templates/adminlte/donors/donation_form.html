@@ -1,149 +1,137 @@
 {% extends 'adminlte/base.html' %}
-{% load static %}
-
 {% block content %}
 <div class="content-header">
   <div class="container-fluid">
-    <div class="row mb-2">
-      <div class="col-sm-6">
-        <h1 class="m-0">New Blood Donation Entry Desk</h1>
-      </div>
-    </div>
+    <h1 class="m-0 text-dark"><i class="fas fa-tint text-danger mr-2"></i>New Blood Donation Entry Desk</h1>
   </div>
 </div>
 
-<section class="content">
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-md-8 mx-auto">
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card card-danger">
+      <div class="card-header">
+        <h3 class="card-title">Clinical Vitals & Intake Verification</h3>
+      </div>
+      <form method="POST" action="">
+        {% csrf_token %}
+        <div class="card-body">
 
-        <!-- Display form validation faults or business logic violations dynamically -->
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger alert-dismissible">
-          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-          <h5><i class="icon fas fa-ban"></i> Processing Fault Encountered</h5>
-          {{ form.non_field_errors }}
-        </div>
-        {% endif %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+            <h5><i class="icon fas fa-ban"></i> Processing Fault Encountered</h5>
+            {{ form.non_field_errors }}
+          </div>
+          {% endif %}
 
-        <div class="card card-outline card-danger shadow">
-          <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-heartbeat mr-2 text-danger"></i> Clinical Vitals & Intake Verification</h3>
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Target Donor Registry *</label>
+              <select name="donor" class="form-control" required>
+                {% for choice in form.fields.donor.choices %}
+                <option value="{{ choice.0 }}" {% if form.donor.value|slugify == choice.0|slugify or request.GET.donor|slugify == choice.0|slugify %}selected{% endif %}>
+                  {{ choice.1 }}
+                </option>
+                {% endfor %}
+              </select>
+              <span class="text-danger">{{ form.donor.errors }}</span>
+            </div>
+
+            <div class="col-md-6 form-group">
+              <label>Associated Collection Campaign</label>
+              <select name="campaign" class="form-control">
+                {% for choice in form.fields.campaign.choices %}
+                <option value="{{ choice.0 }}" {% if form.campaign.value == choice.0 or request.GET.campaign|slugify == choice.0|slugify %}selected{% endif %}>
+                  {{ choice.1 }}
+                </option>
+                {% endfor %}
+              </select>
+              <span class="text-danger">{{ form.campaign.errors }}</span>
+            </div>
           </div>
 
-          <form method="POST" action="">
-            {% csrf_token %}
-            <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <label>Collection Timestamp Date *</label>
+              <!-- FIXED: Uses clean string filter defaults without trying to resolve a missing context module -->
+              <input type="date" name="donation_date" class="form-control" value="{% if form.donation_date.value %}{{ form.donation_date.value|slugify }}{% else %}{% now 'Y-m-d' %}{% endif %}" required>
+              <span class="text-danger">{{ form.donation_date.errors }}</span>
+            </div>
 
-              <div class="row">
-                <!-- Target Donor Field Selection -->
-                <div class="col-md-6 form-group">
-                  <label for="id_donor">Target Donor Registry <span class="text-danger">*</span></label>
-                  <select name="donor" id="id_donor" class="form-control select2" required>
-                    {% for choice in form.fields.donor.choices %}
-                    <option value="{{ choice.0 }}" {% if form.initial.donor.id|stringformat:"i" == choice.0|stringformat:"i" or form.donor.value|stringformat:"i" == choice.0|stringformat:"i" %}selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                  </select>
-                  <span class="text-danger small">{{ form.donor.errors }}</span>
-                </div>
+            <div class="col-md-4 form-group">
+              <label>Screening Intake Outcome *</label>
+              <select name="outcome" id="id_outcome" class="form-control">
+                <option value="COLLECTED" {% if form.outcome.value == "COLLECTED" %}selected{% endif %}>Collected (Success)</option>
+                <option value="DEFERRED" {% if form.outcome.value == "DEFERRED" %}selected{% endif %}>Deferred (Ineligible / Rejected)</option>
+              </select>
+              <span class="text-danger">{{ form.outcome.errors }}</span>
+            </div>
 
-                <!-- Associated Campaign Identification Field -->
-                <div class="col-md-6 form-group">
-                  <label for="id_campaign">Associated Collection Campaign</label>
-                  <select name="campaign" id="id_campaign" class="form-control">
-                    {% for choice in form.fields.campaign.choices %}
-                    <option value="{{ choice.0 }}" {% if form.campaign.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                  </select>
-                  <span class="text-danger small">{{ form.campaign.errors }}</span>
-                </div>
-              </div>
+            <div class="col-md-4 form-group">
+              <label>Volume Gathered (ml) *</label>
+              <input type="number" name="volume_ml" class="form-control" value="{{ form.volume_ml.value|default:'450' }}" required>
+              <span class="text-danger">{{ form.volume_ml.errors }}</span>
+            </div>
+          </div>
 
-              <div class="row">
-                <!-- Date Selection -->
-                <div class="col-md-6 form-group">
-                  <label for="id_donation_date">Collection Timestamp Date <span class="text-danger">*</span></label>
-                  <input type="date" name="donation_date" id="id_donation_date" class="form-control" value="{{ form.donation_date.value|default:timezone.localdate|date:'Y-m-d' }}" required>
-                  <span class="text-danger small">{{ form.donation_date.errors }}</span>
-                </div>
-
-                <!-- Intake Outcome Matrix -->
-                <div class="col-md-6 form-group">
-                  <label for="id_outcome">Screening Intake Outcome <span class="text-danger">*</span></label>
-                  <select name="outcome" id="id_outcome" class="form-control" onchange="toggleDeferralReason()" required>
-                    <option value="COLLECTED" {% if form.outcome.value == 'COLLECTED' %}selected{% endif %}>Collected (Success)</option>
-                    <option value="DEFERRED" {% if form.outcome.value == 'DEFERRED' %}selected{% endif %}>Deferred (Ineligible / Rejected)</option>
-                  </select>
-                  <span class="text-danger small">{{ form.outcome.errors }}</span>
-                </div>
-              </div>
-
-              <!-- Mandatory Deferral Context Field Hidden by Default via JavaScript -->
-              <div id="deferral_reason_wrapper" class="form-group" style="display: none;">
-                <label for="id_deferral_reason" class="text-danger">Mandatory Deferral Reason <span class="text-danger">*</span></label>
-                <input type="text" name="deferral_reason" id="id_deferral_reason" class="form-control" placeholder="Specify clinical reasons (e.g., low hemoglobin, blood pressure anomalies...)" value="{{ form.deferral_reason.value|default:'' }}">
-                <span class="text-danger small">{{ form.deferral_reason.errors }}</span>
-              </div>
-
-              <hr class="my-4">
-              <h5><i class="fas fa-stethoscope mr-2 text-info"></i> Clinical Metrics Summary</h5>
+          <div class="row border-top pt-3 mt-2">
+            <div class="col-12">
+              <h5><i class="fas fa-heartbeat text-info mr-2"></i>Clinical Metrics Summary</h5>
               <br>
-
-              <div class="row">
-                <!-- Hemoglobin Value Capture -->
-                <div class="col-md-4 form-group">
-                  <label for="id_hemoglobin_g_dl">Hemoglobin Level (g/dL) <span class="text-danger">*</span></label>
-                  <input type="number" step="0.1" name="hemoglobin_g_dl" id="id_hemoglobin_g_dl" class="form-control" placeholder="e.g., 13.5" value="{{ form.hemoglobin_g_dl.value|default:'' }}" required>
-                  <span class="text-danger small">{{ form.hemoglobin_g_dl.errors }}</span>
-                </div>
-
-                <!-- Target Volume Metric -->
-                <div class="col-md-4 form-group">
-                  <label for="id_volume_ml">Volume Gathered (ml) <span class="text-danger">*</span></label>
-                  <input type="number" name="volume_ml" id="id_volume_ml" class="form-control" value="{{ form.volume_ml.value|default:'450' }}" required>
-                  <span class="text-danger small">{{ form.volume_ml.errors }}</span>
-                </div>
-
-                <!-- Blood Pressure Metrics Group -->
-                <div class="col-md-2 form-group">
-                  <label for="id_systolic_bp">Systolic BP</label>
-                  <input type="number" name="systolic_bp" id="id_systolic_bp" class="form-control" placeholder="Sys" value="{{ form.systolic_bp.value|default:'' }}">
-                </div>
-                <div class="col-md-2 form-group">
-                  <label for="id_diastolic_bp">Diastolic BP</label>
-                  <input type="number" name="diastolic_bp" id="id_diastolic_bp" class="form-control" placeholder="Dias" value="{{ form.diastolic_bp.value|default:'' }}">
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="id_notes">Internal Clinical Observations / Remarks</label>
-                <textarea name="notes" id="id_notes" class="form-control" rows="3" placeholder="Log general processing notes or observations here...">{{ form.notes.value|default:'' }}</textarea>
-              </div>
-
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Hemoglobin Level (g/dL) *</label>
+              <input type="number" step="0.1" name="hemoglobin_g_dl" class="form-control" value="{{ form.hemoglobin_g_dl.value|default:'' }}" required>
+              <span class="text-danger">{{ form.hemoglobin_g_dl.errors }}</span>
             </div>
 
-            <div class="card-footer clearfix">
-              <a href="{% url 'donor_list' %}" class="btn btn-default">Cancel Operation</a>
-              <button type="submit" class="btn btn-danger float-right"><i class="fas fa-save mr-2"></i> Save Session Metrics</button>
+            <div class="col-md-4 form-group">
+              <label>Systolic BP</label>
+              <input type="number" name="systolic_bp" class="form-control" value="{{ form.systolic_bp.value|default:'' }}">
             </div>
-          </form>
+
+            <div class="col-md-4 form-group">
+              <label>Diastolic BP</label>
+              <input type="number" name="diastolic_bp" class="form-control" value="{{ form.diastolic_bp.value|default:'' }}">
+            </div>
+          </div>
+
+          <div class="row id_deferral_container">
+            <div class="col-md-12 form-group">
+              <label class="text-danger">Mandatory Deferral Reason *</label>
+              <input type="text" name="deferral_reason" id="id_deferral_reason" class="form-control" value="{{ form.deferral_reason.value|default:'' }}">
+              <span class="text-danger">{{ form.deferral_reason.errors }}</span>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 form-group">
+              <label>Internal Clinical Observations / Remarks</label>
+              <textarea name="notes" class="form-control" rows="3">{{ form.notes.value|default:'' }}</textarea>
+            </div>
+          </div>
+
         </div>
-      </div>
+        <div class="card-footer text-right">
+          <a href="{% url 'donor_list' %}" class="btn btn-default mr-2">Cancel Operation</a>
+          <button type="submit" class="btn btn-danger">Save Session Metrics</button>
+        </div>
+      </form>
     </div>
   </div>
-</section>
+</div>
+{% endblock %}
 
-<!-- Script interface to show/hide the deferral field based on selected outcome -->
+{% block extra_js %}
 <script>
-  function toggleDeferralReason() {
+  document.addEventListener("DOMContentLoaded", function() {
     var outcomeField = document.getElementById("id_outcome");
-    var wrapper = document.getElementById("deferral_reason_wrapper");
-    if (outcomeField.value === "DEFERRED") {
-      wrapper.style.display = "block";
-    } else {
-      wrapper.style.display = "none";
+    var deferralBox = document.querySelector(".id_deferral_container");
+    function toggleFields() {
+      deferralBox.style.display = (outcomeField.value === "DEFERRED") ? "block" : "none";
     }
-  }
-  document.addEventListener("DOMContentLoaded", toggleDeferralReason);
+    outcomeField.addEventListener("change", toggleFields);
+    toggleFields();
+  });
 </script>
 {% endblock %}

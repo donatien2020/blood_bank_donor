@@ -12,46 +12,21 @@ from django.core.validators import MinValueValidator, MaxValueValidator, RegexVa
 from django.db import models, transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.db import models
 from core.models import Institution
-from donors.models import Donation
+from donors.models import BloodGroup, BloodComponent, BloodUnitStatus, LabTestResult
+from donors.models import BloodUnit
 
 
 
-class BloodGroup(models.TextChoices):
-    A_POS = "A+", "A+"
-    A_NEG = "A-", "A-"
-    B_POS = "B+", "B+"
-    B_NEG = "B-", "B-"
-    AB_POS = "AB+", "AB+"
-    AB_NEG = "AB-", "AB-"
-    O_POS = "O+", "O+"
-    O_NEG = "O-", "O-"
 
 
-class BloodComponent(models.TextChoices):
-    WHOLE_BLOOD = "WB", "Whole blood"
-    RED_CELLS = "RBC", "Red blood cells"
-    PLASMA = "PLASMA", "Plasma"
-    PLATELETS = "PLT", "Platelets"
 
 
 class DonationOutcome(models.TextChoices):
     COLLECTED = "COLLECTED", "Collected"
     DEFERRED = "DEFERRED", "Deferred"
 
-
-class BloodUnitStatus(models.TextChoices):
-    AVAILABLE = "AVAILABLE", "Available"
-    RESERVED = "RESERVED", "Reserved"
-    ISSUED = "ISSUED", "Issued"
-    EXPIRED = "EXPIRED", "Expired"
-    DISCARDED = "DISCARDED", "Discarded"
-
-
-class LabTestResult(models.TextChoices):
-    PENDING = "PENDING", "Pending"
-    CLEARED = "CLEARED", "Cleared"
-    REACTIVE = "REACTIVE", "Reactive"
 
 
 class BloodRequestStatus(models.TextChoices):
@@ -67,115 +42,6 @@ class RequestUrgency(models.TextChoices):
     URGENT = "URGENT", "Urgent"
     EMERGENCY = "EMERGENCY", "Emergency"
 
-
-
-class BloodUnitQuerySet(models.QuerySet):
-    def available(self):
-        return self.filter(
-            status=BloodUnitStatus.AVAILABLE,
-            test_result=LabTestResult.CLEARED,
-            expiry_date__gte=timezone.localdate(),
-        )
-
-    def expiring_soon(self, days=7):
-        today = timezone.localdate()
-        return self.filter(
-            status=BloodUnitStatus.AVAILABLE,
-            test_result=LabTestResult.CLEARED,
-            expiry_date__gte=today,
-            expiry_date__lte=today + timedelta(days=days),
-        ).order_by("expiry_date")
-
-    def stock_by_group(self):
-        from django.db.models import Count
-        return (
-            self.available()
-            .values("blood_group")
-            .annotate(units=Count("pk"))
-            .order_by("blood_group")
-        )
-
-
-class BloodUnit(models.Model):
-    unit_number = models.CharField(max_length=20, unique=True, editable=False)
-    donation = models.OneToOneField(
-        Donation, on_delete=models.PROTECT, related_name="blood_unit"
-    )
-    blood_group = models.CharField(max_length=3, choices=BloodGroup.choices, editable=False)
-    component = models.CharField(
-        max_length=6, choices=BloodComponent.choices, default=BloodComponent.WHOLE_BLOOD
-    )
-    volume_ml = models.PositiveIntegerField(default=450, validators=[MinValueValidator(1)])
-    collection_date = models.DateField(editable=False)
-    expiry_date = models.DateField(null=True, blank=True)
-    status = models.CharField(
-        max_length=10, choices=BloodUnitStatus.choices, default=BloodUnitStatus.AVAILABLE
-    )
-    test_result = models.CharField(
-        max_length=10, choices=LabTestResult.choices, default=LabTestResult.PENDING
-    )
-    storage_location = models.CharField(max_length=60, blank=True)
-
-    objects = BloodUnitQuerySet.as_manager()
-
-    SHELF_LIFE_DAYS = {
-        BloodComponent.WHOLE_BLOOD: 35,
-        BloodComponent.RED_CELLS: 42,
-        BloodComponent.PLASMA: 365,
-        BloodComponent.PLATELETS: 5,
-    }
-
-    class Meta:
-        ordering = ["expiry_date", "unit_number"]
-        indexes = [
-            models.Index(fields=["blood_group", "status"], name="unit_group_status_idx"),
-            models.Index(fields=["expiry_date"], name="unit_expiry_idx"),
-            models.Index(fields=["component", "test_result"], name="unit_comp_test_idx"),
-        ]
-        constraints = [
-            models.CheckConstraint(condition=Q(volume_ml__gt=0), name="unit_volume_positive"),
-        ]
-
-    def _make_unit_number(self):
-        return f"BU-{timezone.localdate():%y%m}-{uuid.uuid4().hex[:6].upper()}"
-
-    def clean(self):
-        super().clean()
-        if self.donation_id:
-            if self.blood_group and self.blood_group != self.donation.donor.blood_group:
-                raise ValidationError({"blood_group": "Blood group must match the donor."})
-            if self.collection_date and self.collection_date != self.donation.donation_date:
-                raise ValidationError({"collection_date": "Collection date must match the donation date."})
-            if self.donation.outcome != DonationOutcome.COLLECTED:
-                raise ValidationError({"donation": "A deferred donation cannot produce a blood unit."})
-        if self.component and self.collection_date and not self.expiry_date:
-            self.expiry_date = self.collection_date + timedelta(days=self.SHELF_LIFE_DAYS[self.component])
-        if self.collection_date and self.expiry_date and self.expiry_date < self.collection_date:
-            raise ValidationError({"expiry_date": "Expiry date cannot be before collection date."})
-        if self.status == BloodUnitStatus.AVAILABLE and self.test_result == LabTestResult.REACTIVE:
-            raise ValidationError({"status": "A reactive unit cannot be available."})
-
-    def save(self, *args, **kwargs):
-        if not self.unit_number:
-            self.unit_number = self._make_unit_number()
-        if self.donation_id:
-            self.blood_group = self.donation.donor.blood_group
-            self.collection_date = self.donation.donation_date
-            if not self.volume_ml:
-                self.volume_ml = self.donation.volume_ml
-        self.full_clean()
-        return super().save(*args, **kwargs)
-
-    @property
-    def is_issuable(self):
-        return (
-                self.status == BloodUnitStatus.AVAILABLE
-                and self.test_result == LabTestResult.CLEARED
-                and self.expiry_date >= timezone.localdate()
-        )
-
-    def __str__(self):
-        return f"{self.unit_number} — {self.blood_group} / {self.get_component_display()}"
 
 
 class BloodRequest(models.Model):

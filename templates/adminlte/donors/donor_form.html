@@ -1,0 +1,119 @@
+{% extends 'adminlte/base.html' %}
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <h1 class="m-0 text-dark">
+      <i class="fas {% if object %}fa-user-edit{% else %}fa-user-plus{% endif %} mr-2"></i>
+      {% if object %}Edit Donor Profile: {{ object.first_name }} {{ object.last_name }}{% else %}Register New Donor{% endif %}
+    </h1>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card {% if object %}card-warning{% else %}card-success{% endif %}">
+      <div class="card-header">
+        <h3 class="card-title">Donor Structural Information Form</h3>
+      </div>
+      <form method="POST" action="">
+        {% csrf_token %}
+
+        <div class="card-body">
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>National ID (16 Digits) *</label>
+              <input type="text" name="national_id" class="form-control {% if form.national_id.errors %}is-invalid{% endif %}" value="{{ form.national_id.value|default:'' }}" required>
+              <small class="text-danger">{{ form.national_id.errors.0 }}</small>
+            </div>
+            <div class="col-md-3 form-group">
+              <label>First Name *</label>
+              <input type="text" name="first_name" class="form-control" value="{{ form.first_name.value|default:'' }}" required>
+            </div>
+            <div class="col-md-3 form-group">
+              <label>Last Name *</label>
+              <input type="text" name="last_name" class="form-control" value="{{ form.last_name.value|default:'' }}" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <label>Gender *</label>
+              <select name="gender" class="form-control">
+                <option value="M" {% if form.gender.value == "M" %}selected{% endif %}>Male</option>
+                <option value="F" {% if form.gender.value == "F" %}selected{% endif %}>Female</option>
+              </select>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Date of Birth * (Age 18-65)</label>
+              <input type="date" name="date_of_birth" class="form-control {% if form.date_of_birth.errors %}is-invalid{% endif %}" value="{{ form.date_of_birth.value|slugify|default:'' }}" required>
+              <small class="text-danger">{{ form.date_of_birth.errors.0 }}</small>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Blood Group *</label>
+              <select name="blood_group" class="form-control">
+                <option value="A+" {% if form.blood_group.value == "A+" %}selected{% endif %}>A+</option>
+                <option value="A-" {% if form.blood_group.value == "A-" %}selected{% endif %}>A-</option>
+                <option value="B+" {% if form.blood_group.value == "B+" %}selected{% endif %}>B+</option>
+                <option value="B-" {% if form.blood_group.value == "B-" %}selected{% endif %}>B-</option>
+                <option value="AB+" {% if form.blood_group.value == "AB+" %}selected{% endif %}>AB+</option>
+                <option value="AB-" {% if form.blood_group.value == "AB-" %}selected{% endif %}>AB-</option>
+                <option value="O+" {% if form.blood_group.value == "O+" %}selected{% endif %}>O+</option>
+                <option value="O-" {% if form.blood_group.value == "O-" %}selected{% endif %}>O-</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <label>Phone Number *</label>
+              <input type="text" name="phone" class="form-control {% if form.phone.errors %}is-invalid{% endif %}" value="{{ form.phone.value|default:'' }}" required>
+              <small class="text-danger">{{ form.phone.errors.0 }}</small>
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Email Address</label>
+              <input type="email" name="email" class="form-control" value="{{ form.email.value|default:'' }}">
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Weight (kg) * (Min 50kg)</label>
+              <input type="number" step="0.1" name="weight_kg" class="form-control {% if form.weight_kg.errors %}is-invalid{% endif %}" value="{{ form.weight_kg.value|default:'' }}" required>
+              <small class="text-danger">{{ form.weight_kg.errors.0 }}</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>District *</label>
+              <input type="text" name="district" class="form-control" value="{{ form.district.value|default:'' }}" required>
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Sector / Street Address Detail</label>
+              <input type="text" name="address" class="form-control" value="{{ form.address.value|default:'' }}">
+            </div>
+          </div>
+
+          <div class="form-group mb-0">
+            <div class="custom-control custom-checkbox">
+              <input type="checkbox" name="is_active" class="custom-control-input" id="isActiveCheck" {% if form.is_active.value or form.is_active.value is None %}checked{% endif %}>
+              <label class="custom-control-label" for="isActiveCheck">Active & Eligible to Donate (Uncheck to Suspend Profile)</label>
+            </div>
+          </div>
+
+        </div>
+        <div class="card-footer text-right">
+          <a href="{% url 'donor_list' %}" class="btn btn-default mr-2">Cancel</a>
+          <button type="submit" class="btn {% if object %}btn-warning{% else %}btn-success{% endif %}">
+            <i class="fas fa-save mr-1"></i> Save Donor Records
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
