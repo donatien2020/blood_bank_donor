@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.urls import reverse_lazy, reverse
 from inventory.models import BloodRequest, IssuedUnit
 from donors.models import BloodUnit
+from django.contrib.auth.decorators import login_required
 
 
 class BloodRequestListView(LoginRequiredMixin, ListView):
@@ -90,3 +91,15 @@ class BloodRequestUpdateView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, f"Blood Request {form.instance.request_number} updated.")
         return super().form_valid(form)
 
+@login_required
+def remove_issued_unit(request, pk):
+    # Locate the active issue linkage record
+    issued_item = get_object_or_404(IssuedUnit, pk=pk)
+    request_id = issued_item.request.pk
+    unit_number = issued_item.blood_unit.unit_number
+
+    # Executing .delete() automatically updates the unit status back to AVAILABLE
+    issued_item.delete()
+
+    messages.success(request, f"Unit {unit_number} successfully removed from the request allocation panel.")
+    return redirect('issue_units', pk=request_id)
