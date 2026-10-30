@@ -11,7 +11,9 @@ from django.utils import timezone
 from django.views.generic import ListView
 from donors.models import Donation, Donor, DonationCampaign,DonationOutcome
 from django.contrib.auth.decorators import login_required
-from donors.models import BloodUnit
+from django.db import transaction
+from django.views.decorators.http import require_POST
+from donors.models import BloodUnit, LabTestResult, BloodUnitStatus
 
 class DonorListView(LoginRequiredMixin, ListView):
     model = Donor
@@ -152,13 +154,14 @@ class CampaignUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 @login_required
+@require_POST
 def clear_blood_unit(request, pk):
     # Locate the blood unit package safely
     unit = get_object_or_404(BloodUnit, pk=pk)
 
-    if unit.test_result == 'PENDING':
-        unit.test_result = 'CLEARED'
-        unit.status = 'AVAILABLE'
+    if unit.test_result == LabTestResult.PENDING:
+        unit.test_result = LabTestResult.CLEARED
+        unit.status = BloodUnitStatus.AVAILABLE
         unit.save(update_fields=['test_result', 'status'])
         messages.success(request, f"Blood Unit {unit.unit_number} has been successfully cleared and moved to available stock inventory.")
     else:
@@ -170,6 +173,7 @@ def clear_blood_unit(request, pk):
 
 
 @login_required
+@require_POST
 def delete_donation_session(request, pk):
     donation = get_object_or_404(Donation, pk=pk)
 

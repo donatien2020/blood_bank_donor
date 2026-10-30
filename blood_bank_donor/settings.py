@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-p)mjujft!1@$y%x7!2q**xz@5x=rm_ea@qipqv&dr4m2xdu%5l'
+# Read from the environment in production; the fallback is for local development only.
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY", "django-insecure-local-dev-only-change-me"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
 
 
 # Application definition
@@ -41,6 +45,7 @@ INSTALLED_APPS = [
     "core",
     "donors",
     "inventory",
+    "analytics",
 ]
 
 MIDDLEWARE = [
@@ -108,7 +113,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Kigali'
 
 USE_I18N = True
 
@@ -130,3 +135,16 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+# Authentication redirects
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
+
+# --- Machine learning / analytics -------------------------------------------
+# Where trained model files (JSON) are stored.
+ML_MODELS_DIR = BASE_DIR / "ml_models"
+
+# Key that external systems must send in the "X-API-Key" header to push new
+# data into the ingest API. Set a strong value in production.
+ANALYTICS_API_KEY = os.environ.get("ANALYTICS_API_KEY", "dev-ingest-key")
