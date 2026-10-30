@@ -57,9 +57,12 @@
         <span class="nav-link text-dark font-weight-bold">Welcome, {{ request.user.username }}</span>
       </li>
       <li class="nav-item d-none d-sm-inline-block">
-        <a class="nav-link" href="{% url 'admin:logout' %}">
-          <i class="bi bi-box-arrow-right"></i> Logout
-        </a>
+        <form method="post" action="{% url 'logout' %}" class="form-inline m-0">
+          {% csrf_token %}
+          <button type="submit" class="nav-link btn btn-link p-0 border-0" style="background:none;">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </form>
       </li>
 
     </ul>
@@ -79,7 +82,10 @@
       <!-- Sidebar user panel -->
       <div class="user-panel mt-3 pb-3 mb-3 d-flex">
         <div class="image">
-          <img src="{% static 'dist/img/user2-160x160.jpg' %}" class="img-circle elevation-2" alt="User Image">
+          <span class="img-circle elevation-2 d-flex align-items-center justify-content-center"
+                style="width:2.1rem;height:2.1rem;background:#6c757d;">
+            <i class="fas fa-user text-white" style="font-size:1.1rem;"></i>
+          </span>
         </div>
         <div class="info">
           <a href="#" class="d-block">{{ request.user.username }}</a>
@@ -91,7 +97,7 @@
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
 
           <li class="nav-item">
-            <a href="/" class="nav-link active">
+            <a href="/" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
               <i class="nav-icon fas fa-tachometer-alt"></i>
               <p>Dashboard</p>
             </a>
@@ -104,28 +110,28 @@
             </a>
           </li>
           <li class="nav-item">
-            <a href="{% url 'donor_list' %}" class="nav-link">
+            <a href="{% url 'donor_list' %}" class="nav-link {% if request.resolver_match.url_name == 'donor_list' or request.resolver_match.url_name == 'donor_profile' or request.resolver_match.url_name == 'donor_add' or request.resolver_match.url_name == 'donor_edit' %}active{% endif %}">
               <i class="nav-icon fas fa-users"></i>
               <p>Blood Donors</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'campaign_list' %}" class="nav-link">
+            <a href="{% url 'campaign_list' %}" class="nav-link {% if request.resolver_match.url_name == 'campaign_list' or request.resolver_match.url_name == 'campaign_add' or request.resolver_match.url_name == 'campaign_edit' %}active{% endif %}">
               <i class="nav-icon fas fa-bullhorn"></i>
               <p>Donations Campaigns</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'donation_list' %}" class="nav-link">
+            <a href="{% url 'donation_list' %}" class="nav-link {% if request.resolver_match.url_name == 'donation_list' or request.resolver_match.url_name == 'donation_add' %}active{% endif %}">
               <i class="nav-icon fas fa-hand-holding-water"></i>
               <p>Blood Donations</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'request_list' %}" class="nav-link">
+            <a href="{% url 'request_list' %}" class="nav-link {% if request.resolver_match.url_name == 'request_list' or request.resolver_match.url_name == 'request_add' or request.resolver_match.url_name == 'request_edit' or request.resolver_match.url_name == 'issue_units' %}active{% endif %}">
               <i class="nav-icon fas fa-heartbeat"></i>
               <p>Blood Requests</p>
             </a>
