@@ -23,12 +23,6 @@ from donors.models import BloodUnit
 
 
 
-class DonationOutcome(models.TextChoices):
-    COLLECTED = "COLLECTED", "Collected"
-    DEFERRED = "DEFERRED", "Deferred"
-
-
-
 class BloodRequestStatus(models.TextChoices):
     PENDING = "PENDING", "Pending"
     PARTIAL = "PARTIAL", "Partially fulfilled"
@@ -107,7 +101,7 @@ class BloodRequest(models.Model):
         if self.quantity_units is not None and self.quantity_units < 1:
             errors["quantity_units"] = "Quantity must be at least one unit."
         if self.requestor_id and not self.requestor.is_active:
-            errors["institution"] = "An inactive institution cannot submit a new request."
+            errors["requestor"] = "An inactive institution cannot submit a new request."
         if self.status in (BloodRequestStatus.REJECTED, BloodRequestStatus.CANCELLED) and self.issued_units.exists():
             errors["status"] = "A request with issued units cannot be rejected or cancelled."
         if errors:

@@ -173,7 +173,9 @@ class Command(BaseCommand):
             bucket = i % 3
             if bucket == 0:
                 campaign = c1
-                donation_date = c1.start_date + timedelta(days=random.randint(0, (today - c1.start_date).days))
+                # Stay inside the campaign: it ends on the 25th, but today may be later in the month.
+                last_day = min(today, c1.end_date)
+                donation_date = c1.start_date + timedelta(days=random.randint(0, (last_day - c1.start_date).days))
             elif bucket == 1:
                 campaign = c2
                 donation_date = c2.start_date + timedelta(days=random.randint(0, 8))

@@ -11,6 +11,7 @@ from django.urls import reverse_lazy, reverse
 from inventory.models import BloodRequest, IssuedUnit
 from donors.models import BloodUnit
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 
 class BloodRequestListView(LoginRequiredMixin, ListView):
@@ -37,6 +38,8 @@ class IssueUnitsView(LoginRequiredMixin, DetailView):
 
         return context
 
+@login_required
+@require_POST
 def process_issuance(request, pk):
     if request.method == "POST":
         blood_request = get_object_or_404(BloodRequest, pk=pk)
@@ -92,6 +95,7 @@ class BloodRequestUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 @login_required
+@require_POST
 def remove_issued_unit(request, pk):
     # Locate the active issue linkage record
     issued_item = get_object_or_404(IssuedUnit, pk=pk)
