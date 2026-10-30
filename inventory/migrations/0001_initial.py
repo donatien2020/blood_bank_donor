@@ -108,19 +108,19 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='bloodunit',
-            index=models.Index(fields=['blood_group', 'status'], name='unit_group_status_idx'),
+            index=models.Index(fields=['blood_group', 'status'], name='old_unit_group_status_idx'),
         ),
         migrations.AddIndex(
             model_name='bloodunit',
-            index=models.Index(fields=['expiry_date'], name='unit_expiry_idx'),
+            index=models.Index(fields=['expiry_date'], name='old_unit_expiry_idx'),
         ),
         migrations.AddIndex(
             model_name='bloodunit',
-            index=models.Index(fields=['component', 'test_result'], name='unit_comp_test_idx'),
+            index=models.Index(fields=['component', 'test_result'], name='old_unit_comp_test_idx'),
         ),
         migrations.AddConstraint(
             model_name='bloodunit',
-            constraint=models.CheckConstraint(condition=models.Q(('volume_ml__gt', 0)), name='unit_volume_positive'),
+            constraint=models.CheckConstraint(condition=models.Q(('volume_ml__gt', 0)), name='old_unit_volume_positive'),
         ),
         migrations.AddIndex(
             model_name='issuedunit',

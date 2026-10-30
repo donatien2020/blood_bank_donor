@@ -1,145 +1,428 @@
 {% extends 'adminlte/base.html' %}
 {% load static %}
 
+{% block title %}Dashboard | Blood Bank System{% endblock %}
+
+{% block extra_css %}
+<style>
+  .kpi-sub { font-size: .8rem; opacity: .85; }
+  .risk-HIGH { background: #dc3545; color: #fff; }
+  .risk-MEDIUM { background: #ffc107; color: #1f2d3d; }
+  .risk-LOW { background: #28a745; color: #fff; }
+  .factor { font-size: .75rem; }
+  .model-metric { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,.05); padding: 2px 0; }
+  .table td, .table th { vertical-align: middle; }
+  #live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #28a745; margin-right: 4px; }
+  .updated { font-size: .75rem; }
+</style>
+{% endblock %}
+
+{% block page_title %}Blood Bank Dashboard{% endblock %}
+
 {% block content %}
-<div class="content-header">
-  <div class="container-fluid">
-    <div class="row mb-2">
-      <div class="col-sm-6">
-        <h1 class="m-0 text-dark">System Analytics Dashboard</h1>
+{{ payload|json_script:"dashboard-data" }}
+
+<!-- Alerts ----------------------------------------------------------------->
+{% if low_stock_alerts %}
+<div class="alert alert-danger">
+  <h5><i class="icon fas fa-ban"></i> Below minimum stock</h5>
+  <ul class="mb-0">
+    {% for alert in low_stock_alerts %}
+    <li>Blood group <strong>{{ alert.blood_group }}</strong>: {{ alert.current }} units available (minimum {{ alert.minimum }}).</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+<div id="forecast-alert" class="alert alert-warning d-none">
+  <h5><i class="icon fas fa-chart-line"></i> Forecast shortage risk (next 7 days)</h5>
+  <ul class="mb-0" id="forecast-alert-list"></ul>
+</div>
+
+{% for card in payload.models %}{% if not card.trained %}
+<div class="callout callout-info">
+  <h5>{{ card.name }} is not trained yet</h5>
+  <p class="mb-0">Run <code>python manage.py setup_demo</code> (or <code>python manage.py train_models</code>) to train the models.</p>
+</div>
+{% endif %}{% endfor %}
+
+<!-- KPI row 1: operations ------------------------------------------------->
+<div class="row">
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-info">
+      <div class="inner"><h3 data-kpi="active_donors">{{ payload.kpis.active_donors }}</h3><p>Active donors</p></div>
+      <div class="icon"><i class="fas fa-users"></i></div>
+      <a href="{% url 'donor_list' %}" class="small-box-footer">Donors <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-success">
+      <div class="inner"><h3 data-kpi="donations_this_month">{{ payload.kpis.donations_this_month }}</h3><p>Collections this month</p></div>
+      <div class="icon"><i class="fas fa-hand-holding-water"></i></div>
+      <a href="{% url 'donation_list' %}" class="small-box-footer">Donations <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-warning">
+      <div class="inner"><h3 data-kpi="available_units">{{ payload.kpis.available_units }}</h3><p>Available screened units</p></div>
+      <div class="icon"><i class="fas fa-database"></i></div>
+      <a href="/admin/donors/bloodunit/" class="small-box-footer">Stock <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-danger">
+      <div class="inner"><h3 data-kpi="pending_requests">{{ payload.kpis.pending_requests }}</h3><p>Open hospital requests</p></div>
+      <div class="icon"><i class="fas fa-ambulance"></i></div>
+      <a href="{% url 'request_list' %}" class="small-box-footer">Requests <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+</div>
+
+<!-- KPI row 2: predictions ------------------------------------------------>
+<div class="row">
+  <div class="col-lg-3 col-6">
+    <div class="info-box">
+      <span class="info-box-icon bg-primary"><i class="fas fa-chart-line"></i></span>
+      <div class="info-box-content">
+        <span class="info-box-text">Forecast red-cell demand, 7 days</span>
+        <span class="info-box-number"><span data-kpi="forecast_units_7d">{{ payload.kpis.forecast_units_7d }}</span> units</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="info-box">
+      <span class="info-box-icon bg-danger"><i class="fas fa-exclamation-triangle"></i></span>
+      <div class="info-box-content">
+        <span class="info-box-text">Blood groups at high risk</span>
+        <span class="info-box-number"><span data-kpi="groups_at_risk">{{ payload.kpis.groups_at_risk }}</span> of 8</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="info-box">
+      <span class="info-box-icon bg-success"><i class="fas fa-user-check"></i></span>
+      <div class="info-box-content">
+        <span class="info-box-text">Donors expected back, 180 days</span>
+        <span class="info-box-number" data-kpi="expected_returning_donors">{{ payload.kpis.expected_returning_donors }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="info-box">
+      <span class="info-box-icon bg-warning"><i class="fas fa-user-clock"></i></span>
+      <div class="info-box-content">
+        <span class="info-box-text">Deferral rate, last 30 days</span>
+        <span class="info-box-number"><span data-kpi="deferral_rate_30d">{{ payload.kpis.deferral_rate_30d }}</span>%</span>
       </div>
     </div>
   </div>
 </div>
 
-<section class="content">
-  <div class="container-fluid">
-
-    <!-- Threshold Violations / Low Stock Alert Panel -->
-    {% if low_stock_alerts %}
-    <div class="row">
-      <div class="col-12">
-        <div class="alert alert-danger alert-dismissible">
-          <h5><i class="icon fas fa-ban"></i> CRITICAL LOW STOCK WARNING DETECTED</h5>
-          <ul class="mb-0">
-            {% for alert in low_stock_alerts %}
-            <li>Blood Group <strong>{{ alert.blood_group }}</strong> falls below safe operational reserves! Current: {{ alert.current }} units (Minimum Required: {{ alert.minimum }}).</li>
-            {% endfor %}
-          </ul>
-        </div>
+<!-- Forecast vs stock ---------------------------------------------------->
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card card-primary card-outline">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Red-cell stock vs 7-day demand forecast</h3>
+      </div>
+      <div class="card-body">
+        <canvas id="forecastChart" style="height: 280px; max-height: 280px;"></canvas>
       </div>
     </div>
-    {% endif %}
-
-    <!-- Operational Metrics Summary Row -->
-    <div class="row">
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-info">
-          <div class="inner">
-            <h3>{{ total_donors }}</h3>
-            <p>Registered Active Donors</p>
-          </div>
-          <div class="icon"><i class="fas fa-users"></i></div>
-          <a href="{% url 'donor_list' %}" class="small-box-footer">View Details <i class="fas fa-arrow-circle-right"></i></a>
-        </div>
-      </div>
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-success">
-          <div class="inner">
-            <h3>{{ donations_this_month }}</h3>
-            <p>Collections This Month</p>
-          </div>
-          <div class="icon"><i class="fas fa-heartbeat"></i></div>
-          <a href="#" class="small-box-footer">View Registries <i class="fas fa-arrow-circle-right"></i></a>
-        </div>
-      </div>
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-warning">
-          <div class="inner">
-            <h3>{{ available_units }}</h3>
-            <p>Available Screened Units</p>
-          </div>
-          <div class="icon"><i class="fas fa-database"></i></div>
-          <a href="#" class="small-box-footer">Stock Repositories <i class="fas fa-arrow-circle-right"></i></a>
-        </div>
-      </div>
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-danger">
-          <div class="inner">
-            <h3>{{ pending_requests }}</h3>
-            <p>Active Pending Demands</p>
-          </div>
-          <div class="icon"><i class="fas fa-ambulance"></i></div>
-          <a href="{% url 'request_list' %}" class="small-box-footer">Resolve Requests <i class="fas fa-arrow-circle-right"></i></a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Analytics Charts Row -->
-    <div class="row">
-      <div class="col-md-6">
-        <div class="card card-primary">
-          <div class="card-header">
-            <h3 class="card-title">Stock Volume Metrics per Blood Group</h3>
-          </div>
-          <div class="card-body">
-            <canvas id="stockBarChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card card-info">
-          <div class="card-header">
-            <h3 class="card-title">Recent Operational Events</h3>
-          </div>
-          <div class="card-body table-responsive p-0" style="height: 250px;">
-            <table class="table table-head-fixed text-nowrap">
-              <thead>
-              <tr>
-                <th>Request ID</th>
-                <th>Blood Type</th>
-                <th>Quantity</th>
-                <th>Status</th>
-              </tr>
-              </thead>
-              <tbody>
-              {% for req in recent_requests %}
-              <tr>
-                <td>{{ req.request_number }}</td>
-                <td><span class="badge badge-info">{{ req.blood_group }}</span></td>
-                <td>{{ req.quantity_units }}</td>
-                <td><span class="badge badge-secondary">{{ req.get_status_display }}</span></td>
-              </tr>
-              {% empty %}
-              <tr><td colspan="4" class="text-center text-muted">No historical demand rows stored.</td></tr>
-              {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </div>
-</section>
+  <div class="col-lg-5">
+    <div class="card card-primary card-outline">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-tint mr-1"></i> Shortage risk by blood group</h3>
+      </div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-sm table-striped mb-0">
+          <thead><tr><th>Group</th><th class="text-right">Forecast</th><th class="text-right">In stock</th><th class="text-right">Expiring</th><th class="text-right">Days of cover</th><th>Risk</th></tr></thead>
+          <tbody id="forecast-table"></tbody>
+        </table>
+      </div>
+      <div class="card-footer text-muted small">Days of cover = stock that won't expire this week, divided by forecast daily demand.</div>
+    </div>
+  </div>
+</div>
 
-<!-- AdminLTE Embedded Charting Controls -->
-<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+<!-- Trends ----------------------------------------------------------------->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-wave-square mr-1"></i> Last 90 days: collections vs demand (7-day averages)</h3>
+      </div>
+      <div class="card-body">
+        <canvas id="trendChart" style="height: 260px; max-height: 260px;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Donor targeting ------------------------------------------------------->
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card card-success card-outline">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-phone mr-1"></i> Donors to invite now</h3>
+        <div class="card-tools"><span class="badge badge-light">eligible today, ranked by return likelihood &times; group need</span></div>
+      </div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead><tr><th>Donor</th><th>Group</th><th>Phone</th><th>District</th><th class="text-right">Donations</th><th class="text-right">Return likelihood</th></tr></thead>
+          <tbody id="invite-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card card-warning card-outline">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-user-minus mr-1"></i> Regular donors at risk of lapsing</h3>
+      </div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Donor</th><th>Group</th><th>Last donation</th><th class="text-right">Likelihood</th></tr></thead>
+          <tbody id="lapsing-table"></tbody>
+        </table>
+      </div>
+      <div class="card-footer text-muted small">3+ donations before, but under 30% chance of returning within 180 days. A follow-up call may help.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Live screenings + models ---------------------------------------------->
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card card-danger card-outline">
+      <div class="card-header">
+        <h3 class="card-title"><span id="live-dot"></span> Incoming screenings: deferral risk</h3>
+        <div class="card-tools">
+          <a href="{% url 'screening' %}" class="btn btn-tool"><i class="fas fa-plus"></i> New check</a>
+        </div>
+      </div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Time</th><th>Donor</th><th>BP</th><th>Risk</th><th>Main factors</th><th>Source</th></tr></thead>
+          <tbody id="screening-table"></tbody>
+        </table>
+      </div>
+      <div class="card-footer text-muted updated">Updates every 30 seconds &middot; last update <span id="last-update">{{ payload.generated_at|slice:"11:19" }}</span></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-brain mr-1"></i> Deployed models</h3></div>
+      <div class="card-body" id="model-cards"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Operations: expiring units, requests, campaigns ---------------------->
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-hourglass-half mr-1"></i> Units expiring within 7 days</h3></div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Unit</th><th>Group</th><th>Component</th><th>Expires</th></tr></thead>
+          <tbody>
+          {% for unit in expiring_units %}
+          <tr><td>{{ unit.unit_number }}</td><td><span class="badge badge-info">{{ unit.blood_group }}</span></td>
+            <td>{{ unit.get_component_display }}</td><td>{{ unit.expiry_date|date:"d M" }}</td></tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted">Nothing expires this week.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-ambulance mr-1"></i> Latest hospital requests</h3></div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Request</th><th>Hospital</th><th>Group</th><th>Qty</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for req in recent_requests %}
+          <tr>
+            <td><a href="{% url 'issue_units' req.pk %}">{{ req.request_number }}</a></td>
+            <td>{{ req.requestor.name|truncatechars:24 }}</td>
+            <td><span class="badge badge-info">{{ req.blood_group }}</span></td>
+            <td>{{ req.quantity_units }}</td>
+            <td><span class="badge badge-secondary">{{ req.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted">No requests yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-bullhorn mr-1"></i> Upcoming campaigns</h3></div>
+      <div class="card-body">
+        {% for c in active_campaigns %}
+        <div class="mb-3">
+          <strong>{{ c.name }}</strong><br>
+          <small class="text-muted">{{ c.start_date|date:"d M" }} &ndash; {{ c.end_date|date:"d M" }} &middot; target {{ c.target_units }}</small>
+          <div class="progress progress-xs mt-1"><div class="progress-bar bg-success" style="width: {{ c.progress_percent }}%"></div></div>
+        </div>
+        {% empty %}
+        <p class="text-muted mb-0">No campaigns planned.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    var ctx = document.getElementById('stockBarChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: {{ stock_labels|safe }},
-    datasets: [{
-      label: 'Units Available',
-      backgroundColor: '#007bff',
-      data: {{ stock_data|safe }}
-  }]
-  },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-  });
+(function () {
+  var API_URL = "{% url 'api_dashboard' %}";
+  var DONOR_URL = "{% url 'donor_profile' 0 %}";
+  var REFRESH_MS = 30000;
+  var forecastChart = null, trendChart = null;
+
+  function esc(value) {
+    return String(value === null || value === undefined ? "" : value).replace(/[&<>"']/g, function (c) {
+      return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c];
+    });
+  }
+  function pct(p) { return p === null || p === undefined ? "–" : Math.round(p * 100) + "%"; }
+  function riskBadge(level) { return '<span class="badge risk-' + esc(level) + '">' + esc(level) + '</span>'; }
+  function donorLink(row) {
+    return '<a href="' + DONOR_URL.replace("/0/", "/" + row.donor_id + "/") + '">' + esc(row.name) + '</a>';
+  }
+  function emptyRow(cols, text) { return '<tr><td colspan="' + cols + '" class="text-center text-muted">' + text + '</td></tr>'; }
+  function rolling(values, n) {
+    return values.map(function (_, i) {
+      var start = Math.max(0, i - n + 1), slice = values.slice(start, i + 1);
+      return +(slice.reduce(function (a, b) { return a + b; }, 0) / slice.length).toFixed(2);
+    });
+  }
+
+  function renderKpis(kpis) {
+    document.querySelectorAll("[data-kpi]").forEach(function (el) {
+      var key = el.getAttribute("data-kpi");
+      if (kpis[key] !== undefined) el.textContent = kpis[key];
+    });
+  }
+
+  function renderForecasts(forecasts) {
+    var rows = forecasts.map(function (f) {
+      return "<tr><td><strong>" + esc(f.blood_group) + "</strong></td>" +
+        '<td class="text-right">' + f.predicted_units + "</td>" +
+        '<td class="text-right">' + f.available_units + "</td>" +
+        '<td class="text-right">' + f.expiring_units + "</td>" +
+        '<td class="text-right">' + (f.days_of_cover === null ? "&infin;" : f.days_of_cover) + "</td>" +
+        "<td>" + riskBadge(f.risk_level) + "</td></tr>";
+    });
+    document.getElementById("forecast-table").innerHTML = rows.join("") || emptyRow(6, "Train the demand model to see forecasts.");
+
+    var risky = forecasts.filter(function (f) { return f.risk_level !== "LOW"; });
+    var alertBox = document.getElementById("forecast-alert");
+    alertBox.classList.toggle("d-none", risky.length === 0);
+    document.getElementById("forecast-alert-list").innerHTML = risky.map(function (f) {
+      return "<li><strong>" + esc(f.blood_group) + "</strong>: about " + f.predicted_units +
+        " units needed this week, " + f.available_units + " in stock (" + f.expiring_units +
+        " expire soon) &ndash; " + riskBadge(f.risk_level) + "</li>";
+    }).join("");
+
+    var data = {
+      labels: forecasts.map(function (f) { return f.blood_group; }),
+      datasets: [
+        {label: "Available red-cell units", backgroundColor: "#17a2b8", data: forecasts.map(function (f) { return f.available_units; })},
+        {label: "Forecast demand (7 days)", backgroundColor: forecasts.map(function (f) {
+          return f.risk_level === "HIGH" ? "#dc3545" : f.risk_level === "MEDIUM" ? "#ffc107" : "#6c757d";
+        }), data: forecasts.map(function (f) { return f.predicted_units; })}
+      ]
+    };
+    if (forecastChart) { forecastChart.data = data; forecastChart.update(); return; }
+    forecastChart = new Chart(document.getElementById("forecastChart"), {
+      type: "bar", data: data,
+      options: {responsive: true, maintainAspectRatio: false, legend: {position: "bottom"},
+        scales: {yAxes: [{ticks: {beginAtZero: true}, scaleLabel: {display: true, labelString: "Units"}}]}}
+    });
+  }
+
+  function renderTrends(trends) {
+    var data = {
+      labels: trends.labels.map(function (d) { return d.slice(5); }),
+      datasets: [
+        {label: "Units requested", borderColor: "#dc3545", backgroundColor: "transparent", pointRadius: 0, data: rolling(trends.requested_units, 7)},
+        {label: "Donations collected", borderColor: "#28a745", backgroundColor: "transparent", pointRadius: 0, data: rolling(trends.collected, 7)},
+        {label: "Deferred visits", borderColor: "#ffc107", backgroundColor: "transparent", pointRadius: 0, borderDash: [4, 4], data: rolling(trends.deferred, 7)}
+      ]
+    };
+    if (trendChart) { trendChart.data = data; trendChart.update(); return; }
+    trendChart = new Chart(document.getElementById("trendChart"), {
+      type: "line", data: data,
+      options: {responsive: true, maintainAspectRatio: false, legend: {position: "bottom"},
+        scales: {xAxes: [{ticks: {maxTicksLimit: 12}}], yAxes: [{ticks: {beginAtZero: true}, scaleLabel: {display: true, labelString: "Per day"}}]}}
+    });
+  }
+
+  function renderDonors(invite, lapsing) {
+    document.getElementById("invite-table").innerHTML = invite.map(function (d) {
+      return "<tr><td>" + donorLink(d) + '</td><td><span class="badge badge-info">' + esc(d.blood_group) + "</span></td>" +
+        "<td>" + esc(d.phone) + "</td><td>" + esc(d.district) + '</td><td class="text-right">' + d.donations + "</td>" +
+        '<td class="text-right"><strong>' + pct(d.return_probability) + "</strong></td></tr>";
+    }).join("") || emptyRow(6, "No eligible donors scored yet.");
+    document.getElementById("lapsing-table").innerHTML = lapsing.map(function (d) {
+      return "<tr><td>" + donorLink(d) + '</td><td><span class="badge badge-info">' + esc(d.blood_group) + "</span></td>" +
+        "<td>" + esc(d.last_donation || "–") + '</td><td class="text-right">' + pct(d.return_probability) + "</td></tr>";
+    }).join("") || emptyRow(4, "No regular donors at risk.");
+  }
+
+  function renderScreenings(screenings) {
+    document.getElementById("screening-table").innerHTML = screenings.map(function (s) {
+      var factors = s.top_factors.map(function (f) { return '<span class="badge badge-light factor">' + esc(f.label) + "</span>"; }).join(" ");
+      return "<tr><td>" + esc(s.created_at.slice(11, 16)) + "</td>" +
+        "<td>" + donorLink({donor_id: s.donor_id, name: s.donor_name}) + ' <span class="badge badge-info">' + esc(s.blood_group) + "</span></td>" +
+        "<td>" + s.systolic_bp + "/" + s.diastolic_bp + "</td>" +
+        "<td>" + riskBadge(s.risk_level) + " " + pct(s.deferral_risk) + "</td>" +
+        "<td>" + (factors || '<span class="text-muted">&ndash;</span>') + "</td>" +
+        '<td class="text-muted">' + esc(s.source) + "</td></tr>";
+    }).join("") || emptyRow(6, "No screenings yet. Use <em>New check</em> or the ingest API.");
+  }
+
+  function renderModels(models) {
+    document.getElementById("model-cards").innerHTML = models.map(function (m) {
+      if (!m.trained) return '<p class="mb-3"><strong>' + esc(m.name) + '</strong><br><span class="text-muted">Not trained yet</span></p>';
+      var metrics = m.headline.map(function (h) {
+        var v = typeof h.value === "number" ? (Math.abs(h.value) < 1 ? h.value.toFixed(3) : h.value.toFixed(2)) : esc(h.value);
+        return '<div class="model-metric"><span>' + esc(h.label) + "</span><strong>" + v + "</strong></div>";
+      }).join("");
+      return '<div class="mb-3"><strong>' + esc(m.name) + '</strong> <span class="badge badge-primary">v' + m.version + "</span>" +
+        '<div class="text-muted small">Trained ' + esc(m.trained_at) + " &middot; " + m.train_samples + " train / " + m.test_samples +
+        " test samples &middot; data from " + esc(m.data_source) + "</div>" + metrics + "</div>";
+    }).join("");
+  }
+
+  function render(payload) {
+    renderKpis(payload.kpis);
+    renderForecasts(payload.forecasts);
+    renderTrends(payload.trends);
+    renderDonors(payload.donors_to_invite, payload.lapsing_donors);
+    renderScreenings(payload.recent_screenings);
+    renderModels(payload.models);
+    document.getElementById("last-update").textContent = payload.generated_at.slice(11, 19);
+  }
+
+  function refresh() {
+    fetch(API_URL, {credentials: "same-origin", headers: {"Accept": "application/json"}})
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (payload) { document.getElementById("live-dot").style.background = "#28a745"; render(payload); })
+      .catch(function () { document.getElementById("live-dot").style.background = "#dc3545"; });
+  }
+
+  render(JSON.parse(document.getElementById("dashboard-data").textContent));
+  setInterval(refresh, REFRESH_MS);
+})();
 </script>
 {% endblock %}

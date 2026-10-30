@@ -103,14 +103,18 @@ class Donor(models.Model):
     def clean(self):
         super().clean()
         errors = {}
-        if self.date_of_birth:
+        # Registration rules apply when a donor is first registered. Existing
+        # donors can always be edited (e.g. deactivated after turning 66);
+        # whether they may donate is decided by is_eligible_on().
+        is_new = self._state.adding
+        if is_new and self.date_of_birth:
             today = timezone.localdate()
             age = today.year - self.date_of_birth.year - (
                     (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
             )
             if not 18 <= age <= 65:
                 errors["date_of_birth"] = "Donor must be between 18 and 65 years old."
-        if self.weight_kg is not None and self.weight_kg < 50:
+        if is_new and self.weight_kg is not None and self.weight_kg < 50:
             errors["weight_kg"] = "Donor must weigh at least 50 kg."
         if errors:
             raise ValidationError(errors)
@@ -130,7 +134,12 @@ class Donor(models.Model):
         last = self.last_collected_donation
         return last.donation_date + timedelta(days=56) if last else None
 
-    def is_eligible_on(self, on_date=None):
+    def is_eligible_on(self, on_date=None, exclude_donation_pk=None):
+        """Whether the donor may give blood on on_date.
+
+        exclude_donation_pk lets a donation being edited ignore itself when
+        checking the 56-day interval.
+        """
         on_date = on_date or timezone.localdate()
         if not self.is_active:
             return False
@@ -141,10 +150,14 @@ class Donor(models.Model):
         )
         if not 18 <= age <= 65 or self.weight_kg < 50:
             return False
-        last = self.donations.filter(outcome=DonationOutcome.COLLECTED).order_by(
-            "-donation_date", "-pk"
-        ).first()
-        return last is None or on_date >= last.donation_date + timedelta(days=56)
+        others = self.donations.filter(outcome=DonationOutcome.COLLECTED)
+        if exclude_donation_pk:
+            others = others.exclude(pk=exclude_donation_pk)
+        # Any other collected donation within 56 days either side blocks this date.
+        window = timedelta(days=55)
+        return not others.filter(
+            donation_date__gte=on_date - window, donation_date__lte=on_date + window
+        ).exists()
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.national_id})"
@@ -252,8 +265,12 @@ class Donation(models.Model):
             donor = self.donor
             if not donor.is_active:
                 errors["donor"] = "A suspended donor cannot donate."
-            if not donor.is_eligible_on(self.donation_date):
+            if not donor.is_eligible_on(self.donation_date, exclude_donation_pk=self.pk):
                 errors["donor"] = "Donor is not eligible on this date (age, weight, status, or 56-day interval)."
+        if self.pk and self.outcome == DonationOutcome.DEFERRED:
+            unit = BloodUnit.objects.filter(donation_id=self.pk).first()
+            if unit and unit.status == BloodUnitStatus.ISSUED:
+                errors["outcome"] = "This donation's blood unit was already issued; it cannot be changed to deferred."
         if self.campaign_id and self.donation_date:
             campaign = self.campaign
             if not campaign.start_date <= self.donation_date <= campaign.end_date:
