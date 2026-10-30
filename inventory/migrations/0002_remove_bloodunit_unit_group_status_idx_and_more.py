@@ -14,19 +14,19 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RemoveIndex(
             model_name='bloodunit',
-            name='unit_group_status_idx',
+            name='old_unit_group_status_idx',
         ),
         migrations.RemoveIndex(
             model_name='bloodunit',
-            name='unit_expiry_idx',
+            name='old_unit_expiry_idx',
         ),
         migrations.RemoveIndex(
             model_name='bloodunit',
-            name='unit_comp_test_idx',
+            name='old_unit_comp_test_idx',
         ),
         migrations.RemoveConstraint(
             model_name='bloodunit',
-            name='unit_volume_positive',
+            name='old_unit_volume_positive',
         ),
         migrations.AlterField(
             model_name='issuedunit',

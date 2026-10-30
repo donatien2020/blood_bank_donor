@@ -7,11 +7,9 @@
   <title>{% block title %}Blood Bank Dashboard{% endblock %}</title>
 
   <!-- Google Font: Source Sans Pro -->
-  <link rel="stylesheet" href="https://googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
-  <!-- Ionicons -->
-  <link rel="stylesheet" href="https://ionicframework.com">
   <!-- Tempusdominus Bootstrap 4 -->
   <link rel="stylesheet" href="{% static 'plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css' %}">
   <!-- iCheck -->
@@ -57,9 +55,10 @@
         <span class="nav-link text-dark font-weight-bold">Welcome, {{ request.user.username }}</span>
       </li>
       <li class="nav-item d-none d-sm-inline-block">
-        <a class="nav-link" href="{% url 'admin:logout' %}">
-          <i class="bi bi-box-arrow-right"></i> Logout
-        </a>
+        <form method="post" action="{% url 'logout' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-link nav-link"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </form>
       </li>
 
     </ul>
@@ -91,9 +90,15 @@
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
 
           <li class="nav-item">
-            <a href="/" class="nav-link active">
+            <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
               <i class="nav-icon fas fa-tachometer-alt"></i>
               <p>Dashboard</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'screening' %}" class="nav-link {% if request.resolver_match.url_name == 'screening' %}active{% endif %}">
+              <i class="nav-icon fas fa-stethoscope"></i>
+              <p>Screening Check</p>
             </a>
           </li>
           <!-- Add this block inside your sidebar menu <ul> in base.html -->

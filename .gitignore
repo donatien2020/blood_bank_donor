@@ -25,4 +25,5 @@ htmlcov/
 .idea/
 # Operating system files
 .DS_Store
-Thumbs.db
+Thumbs.db# Trained model files (re-create with: python manage.py train_models)
+ml_models/

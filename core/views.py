@@ -16,92 +16,41 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
 from core.models import Institution
-try:
-    from donors.models import Donor, Donation, DonationCampaign, DonationOutcome
-    from inventory.models import BloodUnit, BloodRequest, IssuedUnit, StockThreshold, BloodRequestStatus, BloodUnitStatus, LabTestResult
-except ImportError:
-    from apps.donors.models import Donor, Donation, DonationCampaign, DonationOutcome
-    from apps.inventory.models import BloodUnit, BloodRequest, IssuedUnit, StockThreshold, BloodRequestStatus, BloodUnitStatus, LabTestResult
+from donors.models import Donor, Donation, DonationCampaign, DonationOutcome, BloodUnit, BloodUnitStatus, LabTestResult
+from inventory.models import BloodRequest, IssuedUnit, StockThreshold, BloodRequestStatus
 
 class DashboardView(LoginRequiredMixin, TemplateView):
+    """Operational dashboard plus the predictions from the trained models.
+
+    Prediction panels are drawn in the browser from the same JSON that
+    /api/v1/predictions/dashboard/ serves, and refresh every 30 seconds.
+    """
+
     template_name = "adminlte/dashboard.html"
 
     def get_context_data(self, **kwargs):
+        from analytics.services import dashboard_payload
+
         context = super().get_context_data(**kwargs)
         today = timezone.localdate()
-        first_of_month = today.replace(day=1)
 
-        # 1. Summary Cards Data
-        context["total_donors"] = Donor.objects.filter(is_active=True).count()
-        context["donations_this_month"] = Donation.objects.filter(
-            donation_date__gte=first_of_month,
-            outcome=DonationOutcome.COLLECTED
-        ).count()
-
-        # Safe execution of custom manager methods
-        if hasattr(BloodUnit.objects, "available"):
-            context["available_units"] = BloodUnit.objects.available().count()
-        else:
-            context["available_units"] = BloodUnit.objects.filter(
-                status=BloodUnitStatus.AVAILABLE,
-                test_result=LabTestResult.CLEARED,
-                expiry_date__gte=today
-            ).count()
-
-        context["pending_requests"] = BloodRequest.objects.filter(
-            status__in=[BloodRequestStatus.PENDING, BloodRequestStatus.PARTIAL]
-        ).count()
-
-        if hasattr(BloodUnit.objects, "expiring_soon"):
-            context["expiring_soon"] = BloodUnit.objects.expiring_soon(days=7).count()
-        else:
-            context["expiring_soon"] = BloodUnit.objects.filter(
-                status=BloodUnitStatus.AVAILABLE,
-                test_result=LabTestResult.CLEARED,
-                expiry_date__gte=today,
-                expiry_date__lte=today + timedelta(days=7)
-            ).count()
-
-        # 2. Low-Stock Alerts Threshold Verification
-        thresholds = StockThreshold.objects.all()
-        low_stock_alerts = []
-        for t in thresholds:
-            if hasattr(BloodUnit.objects, "available"):
-                current = BloodUnit.objects.available().filter(blood_group=t.blood_group).count()
-            else:
-                current = BloodUnit.objects.filter(
-                    status=BloodUnitStatus.AVAILABLE,
-                    test_result=LabTestResult.CLEARED,
-                    expiry_date__gte=today,
-                    blood_group=t.blood_group
-                ).count()
-            if current < t.minimum_units:
-                low_stock_alerts.append({
-                    "blood_group": t.blood_group,
-                    "current": current,
-                    "minimum": t.minimum_units
-                })
-        context["low_stock_alerts"] = low_stock_alerts
-
-        # 3. Dynamic Charts Aggregation Data
-        # Available stock per group
-        if hasattr(BloodUnit.objects, "stock_by_group"):
-            stock_query = list(BloodUnit.objects.stock_by_group())
-        else:
-            stock_query = list(BloodUnit.objects.filter(
-                status=BloodUnitStatus.AVAILABLE,
-                test_result=LabTestResult.CLEARED,
-                expiry_date__gte=today
-            ).values("blood_group").annotate(units=Count("id")))
-
-        context["stock_labels"] = [item["blood_group"] for item in stock_query]
-        context["stock_data"] = [item.get("units", item.get("id__count", 0)) for item in stock_query]
-
-        # Recent Records Tables
-        context["recent_donations"] = Donation.objects.all().select_related("donor")[:10]
-        context["recent_requests"] = BloodRequest.objects.all().order_by("-request_date")[:10]
-
+        # Minimum-stock thresholds set by the blood bank
+        available = dict(
+            BloodUnit.objects.available().values_list("blood_group").annotate(n=Count("pk"))
+        )
+        context["low_stock_alerts"] = [
+            {"blood_group": t.blood_group, "current": available.get(t.blood_group, 0), "minimum": t.minimum_units}
+            for t in StockThreshold.objects.all()
+            if available.get(t.blood_group, 0) < t.minimum_units
+        ]
+        context["payload"] = dashboard_payload()
+        context["expiring_units"] = BloodUnit.objects.expiring_soon(days=7)[:10]
+        context["recent_requests"] = BloodRequest.objects.select_related("requestor").order_by("-request_date")[:8]
+        context["active_campaigns"] = DonationCampaign.objects.filter(
+            end_date__gte=today, status__in=["PLANNED", "ONGOING"]
+        ).order_by("start_date")[:5]
         return context
+
 
 class SystemLoginView(LoginView):
     template_name = "adminlte/login.html"
@@ -143,94 +92,3 @@ class InstitutionUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, f"Institution parameters updated for '{form.instance.name}'.")
         return super().form_valid(form)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#ORIGINAL VIEWS
-
-
-@login_required(login_url="/admin/login/")
-def dashboard(request):
-    context = {
-        "total_donors": 10,
-        "total_donations": 20,
-        "total_requests": 12,
-        "available_units": 18,
-    }
-
-    return render(request, "adminlte/index.html", context)
-
-@login_required(login_url="/admin/login/")
-def dashboardV1(request):
-    context = {
-        "total_donors": 10,
-        "total_donations": 20,
-        "total_requests": 12,
-        "available_units": 18,
-    }
-
-    return render(request, "adminlte/index.html", context)
-@login_required(login_url="/admin/login/")
-def dashboardV2(request):
-    context = {
-        "total_donors": 10,
-        "total_donations": 20,
-        "total_requests": 12,
-        "available_units": 18,
-    }
-
-    return render(request, "adminlte/index2.html", context)
-
-@login_required(login_url="/admin/login/")
-def dashboardV3(request):
-    context = {
-        "total_donors": 10,
-        "total_donations": 20,
-        "total_requests": 12,
-        "available_units": 18,
-    }
-
-    return render(request, "adminlte/index3.html", context)
-
