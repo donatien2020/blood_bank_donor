@@ -1,7 +1,7 @@
 # Save this file exactly as: donors/urls.py
 from django.urls import path
 from . import views
-from .views import DonorListView, DonorDetailView,DonorCreateView,DonorUpdateView, DonationCreateView,CampaignListView,DonationListView,CampaignCreateView,CampaignUpdateView,delete_donation_session
+from .views import DonorListView, DonorDetailView,DonorCreateView,DonorUpdateView, DonationCreateView,CampaignListView,DonationListView,CampaignCreateView,CampaignUpdateView,delete_donation_session,clear_blood_unit
 urlpatterns = [
 
 
@@ -16,5 +16,6 @@ urlpatterns = [
     path('donations/', DonationListView.as_view(), name='donation_list'),          # <-- List Donations
     path('donations/add/', DonationCreateView.as_view(), name='donation_add'),
     path('donations/<int:pk>/delete/', delete_donation_session, name='delete_donation'),
+    path('donations/unit/<int:pk>/clear/', clear_blood_unit, name='clear_unit'),
 
 ]
