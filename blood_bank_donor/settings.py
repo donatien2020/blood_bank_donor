@@ -120,6 +120,14 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Authentication redirects
+# https://docs.djangoproject.com/en/6.1/ref/settings/#login-redirect-url
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
@@ -135,11 +143,6 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
-
-# Authentication redirects
-LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "dashboard"
-LOGOUT_REDIRECT_URL = "login"
 
 # --- Machine learning / analytics -------------------------------------------
 # Where trained model files (JSON) are stored.

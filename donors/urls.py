@@ -16,6 +16,6 @@ urlpatterns = [
     path('donations/', DonationListView.as_view(), name='donation_list'),          # <-- List Donations
     path('donations/add/', DonationCreateView.as_view(), name='donation_add'),
     path('donations/<int:pk>/delete/', delete_donation_session, name='delete_donation'),
-    path('units/<int:pk>/clear/', clear_blood_unit, name='clear_unit'),
+    path('donations/unit/<int:pk>/clear/', clear_blood_unit, name='clear_unit'),
 
 ]
