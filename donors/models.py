@@ -370,9 +370,9 @@ class BloodUnit(models.Model):
     class Meta:
         ordering = ["expiry_date", "unit_number"]
         indexes = [
-            models.Index(fields=["blood_group", "status"], name="unit_group_status_idx"),
-            models.Index(fields=["expiry_date"], name="unit_expiry_idx"),
-            models.Index(fields=["component", "test_result"], name="unit_comp_test_idx"),
+            models.Index(fields=["blood_group", "status"], name="donor_unit_group_status_idx"),
+            models.Index(fields=["expiry_date"], name="donor_unit_expiry_idx"),
+            models.Index(fields=["component", "test_result"], name="donor_unit_comp_test_idx"),
         ]
         constraints = [
             models.CheckConstraint(condition=Q(volume_ml__gt=0), name="unit_volume_positive"),
