@@ -100,12 +100,49 @@
               <p>Dashboard</p>
             </a>
           </li>
-          <li class="nav-item">
-            <a href="{% url 'screening' %}" class="nav-link {% if request.resolver_match.url_name == 'screening' %}active{% endif %}">
-              <i class="nav-icon fas fa-stethoscope"></i>
-              <p>Screening Check</p>
+          {% with url_name=request.resolver_match.url_name %}
+          {% with in_analytics=url_name|slice:":10" %}
+          <!-- Analytics & Predictions (machine-learning pages from the analytics app) -->
+          <li class="nav-item {% if in_analytics == 'analytics_' or url_name == 'screening' %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if in_analytics == 'analytics_' or url_name == 'screening' %}active{% endif %}">
+              <i class="nav-icon fas fa-brain"></i>
+              <p>Analytics &amp; Predictions <i class="right fas fa-angle-left"></i></p>
             </a>
+            <ul class="nav nav-treeview">
+              <li class="nav-item">
+                <a href="{% url 'analytics_forecasts' %}" class="nav-link {% if url_name == 'analytics_forecasts' %}active{% endif %}">
+                  <i class="fas fa-chart-line nav-icon"></i>
+                  <p>Demand Forecasts</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'analytics_donor_predictions' %}" class="nav-link {% if url_name == 'analytics_donor_predictions' %}active{% endif %}">
+                  <i class="fas fa-user-check nav-icon"></i>
+                  <p>Donor Predictions</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'screening' %}" class="nav-link {% if url_name == 'screening' %}active{% endif %}">
+                  <i class="fas fa-stethoscope nav-icon"></i>
+                  <p>New Screening Check</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'analytics_screenings' %}" class="nav-link {% if url_name == 'analytics_screenings' %}active{% endif %}">
+                  <i class="fas fa-clipboard-list nav-icon"></i>
+                  <p>Screening Checks</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'analytics_models' %}" class="nav-link {% if url_name == 'analytics_models' or url_name == 'analytics_model_detail' %}active{% endif %}">
+                  <i class="fas fa-microchip nav-icon"></i>
+                  <p>Trained Models</p>
+                </a>
+              </li>
+            </ul>
           </li>
+          {% endwith %}
+          {% endwith %}
           <!-- Add this block inside your sidebar menu <ul> in base.html -->
           <li class="nav-item">
             <a href="{% url 'institution_list' %}" class="nav-link {% if request.resolver_match.url_name == 'institution_list' or request.resolver_match.url_name == 'institution_add' or request.resolver_match.url_name == 'institution_edit' %}active{% endif %}">

@@ -189,3 +189,59 @@ class DashboardTests(PipelineTestCase):
         call_command("simulate_incoming", events=12, seed=3, stdout=open("/dev/null", "w"))
         self.assertGreater(ScreeningCheck.objects.count() + Donation.objects.filter(
             donation_date=timezone.localdate()).count(), 0)
+
+
+class AnalyticsPagesTests(PipelineTestCase):
+    """The Analytics & Predictions menu pages in the AdminLTE UI."""
+
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user("staff", password="pass-1234-x", is_staff=True)
+        self.client.force_login(self.staff)
+
+    def test_menu_and_pages_render(self):
+        pages = [
+            reverse("analytics_forecasts"),
+            reverse("analytics_donor_predictions"),
+            reverse("analytics_donor_predictions") + "?band=high&eligible=1&blood_group=O%2B&order=asc",
+            reverse("analytics_screenings") + "?risk=HIGH",
+            reverse("analytics_models"),
+            reverse("analytics_model_detail", args=[TrainedModel.objects.first().pk]),
+        ]
+        for url in pages:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200, url)
+            self.assertContains(response, "Analytics &amp; Predictions")  # sidebar menu
+            self.assertContains(response, "menu-open")                    # menu expanded on its pages
+
+    def test_donor_prediction_filters(self):
+        response = self.client.get(reverse("analytics_donor_predictions") + "?band=high")
+        probabilities = [p.return_probability for p in response.context["predictions"]]
+        self.assertTrue(probabilities)
+        self.assertTrue(all(p >= 0.6 for p in probabilities))
+        self.assertEqual(probabilities, sorted(probabilities, reverse=True))
+
+    def test_model_detail_shows_feature_weights(self):
+        record = TrainedModel.objects.get(kind=ModelKind.DEFERRAL, is_active=True)
+        response = self.client.get(reverse("analytics_model_detail", args=[record.pk]))
+        names = [w["name"] for w in response.context["weights"]]
+        self.assertIn("bp_over_limit", names)
+
+    def test_staff_can_retrain_and_activate(self):
+        response = self.client.post(reverse("analytics_retrain"))
+        self.assertRedirects(response, reverse("analytics_models"))
+        demand = TrainedModel.objects.filter(kind=ModelKind.DEMAND)
+        self.assertEqual(demand.get(is_active=True).version, demand.order_by("-version").first().version)
+
+        old = demand.order_by("version").first()
+        self.client.post(reverse("analytics_model_activate", args=[old.pk]))
+        self.assertEqual(TrainedModel.objects.get(kind=ModelKind.DEMAND, is_active=True).pk, old.pk)
+        self.assertEqual(DemandForecast.objects.first().model_id, old.pk)
+
+    def test_actions_are_staff_only_and_post_only(self):
+        self.assertEqual(self.client.get(reverse("analytics_retrain")).status_code, 405)
+        regular = get_user_model().objects.create_user("clerk", password="pass-1234-x")
+        self.client.force_login(regular)
+        response = self.client.post(reverse("analytics_refresh"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response["Location"])
+        self.assertEqual(self.client.get(reverse("analytics_models")).status_code, 200)  # viewing is allowed

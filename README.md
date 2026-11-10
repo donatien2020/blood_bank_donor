@@ -73,6 +73,22 @@ python manage.py simulate_incoming --events 20         # new data -> predictions
 python manage.py refresh_predictions                   # e.g. nightly
 ```
 
+## Where to find the analytics features
+
+After signing in, everything is in the left sidebar:
+
+| Page | Sidebar | What it shows |
+|---|---|---|
+| Dashboard | **Dashboard** | KPIs, shortage alerts, forecast vs stock, donors to invite, lapsing donors, live screenings, 90-day trends, model quality. Refreshes every 30 seconds. |
+| Demand Forecasts | **Analytics & Predictions → Demand Forecasts** | 7-day red-cell demand per blood group, stock, expiring units, days of cover and shortage risk. |
+| Donor Predictions | **Analytics & Predictions → Donor Predictions** | Every donor's chance of returning within 180 days. Filter by blood group, likelihood, district or "eligible today". |
+| New Screening Check | **Analytics & Predictions → New Screening Check** | Enter a donor's national ID and blood pressure to get their deferral risk and the main reasons. |
+| Screening Checks | **Analytics & Predictions → Screening Checks** | History of every screening from the web form, API and simulator, filterable by risk and source. |
+| Trained Models | **Analytics & Predictions → Trained Models** | All model versions with test results. Open **Details** to see what each model learned (feature weights). |
+
+Staff users also get three buttons: **Retrain models** (Trained Models page), **Make this the
+active version** (a model's Details page, to roll back) and **Refresh** (Demand Forecasts page).
+
 ## Live demo of incoming data
 
 Leave the server running. In a **second terminal**:

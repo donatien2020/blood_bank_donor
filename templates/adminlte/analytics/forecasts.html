@@ -1,0 +1,163 @@
+{% extends 'adminlte/base.html' %}
+
+{% block title %}Demand Forecasts | Blood Bank System{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line mr-2"></i>Demand Forecasts{% endblock %}
+
+{% block extra_css %}
+<style>
+  .risk-HIGH { background: #dc3545; color: #fff; }
+  .risk-MEDIUM { background: #ffc107; color: #1f2d3d; }
+  .risk-LOW { background: #28a745; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'adminlte/analytics/_messages.html' %}
+
+<div class="callout callout-info">
+  <p class="mb-1">
+    The <strong>blood demand model</strong> predicts how many red-cell units (whole blood and red cells)
+    hospitals will request for each blood group over the next <strong>{{ horizon_days }} days</strong>,
+    based on the last four weeks of requests and the season. It compares that forecast with
+    current stock to warn about shortages before they happen.
+  </p>
+  <small class="text-muted">
+    {% if model %}Model: <a href="{% url 'analytics_model_detail' model.pk %}">{{ model }}</a> &middot; {% endif %}
+    {% if updated_at %}Last updated {{ updated_at|date:"d M Y H:i" }} &middot; {% endif %}
+    Forecasts update automatically when a request, donation or issued unit is recorded.
+  </small>
+</div>
+
+{% if not forecasts %}
+<div class="alert alert-warning">
+  The demand model has not been trained yet. Go to
+  <a href="{% url 'analytics_models' %}">Trained Models</a> and click <strong>Retrain models</strong>,
+  or run <code>python manage.py setup_demo</code>.
+</div>
+{% else %}
+
+<div class="row">
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-primary">
+      <div class="inner"><h3>{{ totals.predicted }}</h3><p>Units forecast, next {{ horizon_days }} days</p></div>
+      <div class="icon"><i class="fas fa-chart-line"></i></div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-info">
+      <div class="inner"><h3>{{ totals.available }}</h3><p>Red-cell units in stock</p></div>
+      <div class="icon"><i class="fas fa-database"></i></div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-warning">
+      <div class="inner"><h3>{{ totals.expiring }}</h3><p>Units expiring within {{ horizon_days }} days</p></div>
+      <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-danger">
+      <div class="inner"><h3>{{ totals.high }} <sup style="font-size: 20px">of 8</sup></h3><p>Blood groups at high risk</p></div>
+      <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card card-primary card-outline">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Forecast demand vs stock</h3></div>
+      <div class="card-body"><canvas id="forecastChart" style="height: 320px; max-height: 320px;"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card card-primary card-outline">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-tint mr-1"></i> Forecast by blood group</h3>
+        {% if user.is_staff %}
+        <div class="card-tools">
+          <form method="post" action="{% url 'analytics_refresh' %}" class="d-inline">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="btn btn-tool" title="Recompute now"><i class="fas fa-sync-alt"></i> Refresh</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-body table-responsive p-0">
+        <table class="table table-striped table-hover m-0">
+          <thead>
+          <tr>
+            <th>Group</th>
+            <th class="text-right">Forecast</th>
+            <th class="text-right">In stock</th>
+            <th class="text-right">Expiring</th>
+            <th class="text-right">Usable</th>
+            <th class="text-right">Days of cover</th>
+            <th class="text-right">Shortfall</th>
+            <th>Risk</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for f in forecasts %}
+          <tr>
+            <td><span class="badge badge-danger">{{ f.blood_group }}</span></td>
+            <td class="text-right"><strong>{{ f.predicted_units }}</strong></td>
+            <td class="text-right">{{ f.available_units }}</td>
+            <td class="text-right">{{ f.expiring_units }}</td>
+            <td class="text-right">{{ f.usable_units }}</td>
+            <td class="text-right">{% if f.days_of_cover is None %}&infin;{% else %}{{ f.days_of_cover }}{% endif %}</td>
+            <td class="text-right">{% if f.shortfall_units %}<span class="text-danger">{{ f.shortfall_units }}</span>{% else %}0{% endif %}</td>
+            <td><span class="badge risk-{{ f.risk_level }}">{{ f.risk_level }}</span></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card collapsed-card">
+  <div class="card-header">
+    <h3 class="card-title"><i class="fas fa-question-circle mr-1"></i> How to read this page</h3>
+    <div class="card-tools"><button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button></div>
+  </div>
+  <div class="card-body">
+    <ul class="mb-0">
+      <li><strong>Forecast</strong>: red-cell units hospitals are expected to request in the next {{ horizon_days }} days.</li>
+      <li><strong>Usable</strong>: units in stock minus those expiring within {{ horizon_days }} days.</li>
+      <li><strong>Days of cover</strong>: how long usable stock lasts at the forecast rate.</li>
+      <li><strong>Risk</strong>: <span class="badge risk-HIGH">HIGH</span> under {{ horizon_days }} days of cover,
+        <span class="badge risk-MEDIUM">MEDIUM</span> under {% widthratio horizon_days 1 2 %} days,
+        <span class="badge risk-LOW">LOW</span> otherwise.</li>
+      <li>For high-risk groups, invite eligible donors from <a href="{% url 'analytics_donor_predictions' %}?eligible=1">Donor Predictions</a>.</li>
+      <li>Plasma and platelets are not included: they cannot replace red cells.</li>
+    </ul>
+  </div>
+</div>
+{{ chart_data|json_script:"chart-data" }}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var el = document.getElementById("chart-data");
+  if (!el) return;
+  var d = JSON.parse(el.textContent);
+  new Chart(document.getElementById("forecastChart"), {
+    type: "bar",
+    data: {
+      labels: d.labels,
+      datasets: [
+        {label: "Forecast demand (7 days)", backgroundColor: "#007bff", data: d.predicted},
+        {label: "Usable stock", backgroundColor: "#28a745", data: d.usable},
+        {label: "Total stock", backgroundColor: "#17a2b8", data: d.available}
+      ]
+    },
+    options: {responsive: true, maintainAspectRatio: false, legend: {position: "bottom"},
+      scales: {yAxes: [{ticks: {beginAtZero: true}, scaleLabel: {display: true, labelString: "Units"}}]}}
+  });
+})();
+</script>
+{% endblock %}
