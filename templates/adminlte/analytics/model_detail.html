@@ -23,12 +23,12 @@
       <div class="card-body p-0">
         <table class="table table-sm m-0">
           <tr><td>Status</td><td>{% if trained_model.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-secondary">Inactive</span>{% endif %}</td></tr>
-          <tr><td>Algorithm</td><td>{% if is_classifier %}Logistic regression{% else %}Ridge regression{% endif %}</td></tr>
-          <tr><td>Trained</td><td>{{ trained_model.trained_at|date:"d M Y H:i" }}</td></tr>
-          <tr><td>Data source</td><td><code class="small">{{ trained_model.data_source }}</code></td></tr>
-          <tr><td>Training samples</td><td>{{ trained_model.train_samples }}</td></tr>
-          <tr><td>Test samples</td><td>{{ trained_model.test_samples }}</td></tr>
-          <tr><td>Model file</td><td><code class="small">ml_models/{{ trained_model.file_name }}</code>{% if file_missing %} <span class="badge badge-danger">missing</span>{% endif %}</td></tr>
+          <tr><td>Used Algorithm :</td><td>{% if is_classifier %}Logistic regression{% else %}Ridge regression{% endif %}</td></tr>
+          <tr><td>Trained At :</td><td>{{ trained_model.trained_at|date:"d M Y H:i" }}</td></tr>
+          <tr><td>Data source :</td><td><code class="small">{{ trained_model.data_source }}</code></td></tr>
+          <tr><td>Training samples :</td><td>{{ trained_model.train_samples }}</td></tr>
+          <tr><td>Test samples :</td><td>{{ trained_model.test_samples }}</td></tr>
+          <tr><td>Model file :</td><td><code class="small">ml_models/{{ trained_model.file_name }}</code>{% if file_missing %} <span class="badge badge-danger">missing</span>{% endif %}</td></tr>
         </table>
       </div>
     </div>
