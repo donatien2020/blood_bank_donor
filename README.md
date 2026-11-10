@@ -26,43 +26,79 @@ hospital requests, extended with **machine-learning predictions**:
    targeting lists, live screening results, trends and model quality, and refreshes
    itself every 30 seconds.
 
-## Getting started
+## Install and start
 
-Requirements: Python 3.12+ (required by Django 6.1) and pip.
+Django 6.1 needs **Python 3.12 or newer**. Check with `python3 --version`.
+
+- **Ubuntu 24.04:** Python 3.12 is included. Install the venv and pip packages:
+  ```bash
+  sudo apt install python3-venv python3-pip
+  ```
+- **Ubuntu 22.04:** install Python 3.12 first, then use `python3.12` instead of
+  `python3` in the next block:
+  ```bash
+  sudo add-apt-repository ppa:deadsnakes/ppa
+  sudo apt update
+  sudo apt install python3.12 python3.12-venv
+  ```
+
+Then:
 
 ```bash
 git clone https://github.com/donatien2020/blood_bank_donor.git
 cd blood_bank_donor
 python3 -m venv .venv
-source .venv/bin/activate            # Windows PowerShell: .venv\Scripts\Activate.ps1
-python3 -m pip install -r requirements.txt
-python3 manage.py migrate
-python3 manage.py createsuperuser
-python3 manage.py setup_demo         # synthetic data + training + sample incoming events
-python3 manage.py runserver
+source .venv/bin/activate             # Windows PowerShell: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+rm -f db.sqlite3                      # start with a fresh database
+python manage.py migrate
+python manage.py createsuperuser      # pick your username and password
+python manage.py setup_demo           # about 1 minute
+python manage.py runserver
 ```
 
-Open http://127.0.0.1:8000/ and sign in.
+`setup_demo` generates two years of synthetic data, trains the three models by
+reading the API, and sends a few incoming events. It ends with **"Demo ready"**.
+It replaces existing donor data.
 
-`setup_demo` replaces existing donor data. To run the steps one at a time:
+Open http://127.0.0.1:8000 and sign in with the superuser you created.
+
+To run the steps one at a time instead:
 
 ```bash
-python3 manage.py generate_synthetic_data --clear      # --donors 3000 --days 730 --seed 42
-python3 manage.py train_models                          # reads the API in-process
-python3 manage.py simulate_incoming --events 20         # new data -> predictions
-python3 manage.py refresh_predictions                   # e.g. nightly
+python manage.py generate_synthetic_data --clear      # --donors 3000 --days 730 --seed 42
+python manage.py train_models                          # reads the API in-process
+python manage.py simulate_incoming --events 20         # new data -> predictions
+python manage.py refresh_predictions                   # e.g. nightly
 ```
 
-### Live demo with real HTTP
+## Live demo of incoming data
 
-Run the server in one terminal and these in another:
+Leave the server running. In a **second terminal**:
 
 ```bash
-python3 manage.py train_models --api-url http://127.0.0.1:8000
-python3 manage.py simulate_incoming --events 100 --interval 5 --api-url http://127.0.0.1:8000
+cd blood_bank_donor
+source .venv/bin/activate
+python manage.py simulate_incoming --events 30 --interval 5 --api-url http://127.0.0.1:8000
 ```
 
-Keep the dashboard open: incoming screenings, forecasts and donor lists update every 30 seconds.
+Each line shows a new screening, donation, blood request or donor posted to the API,
+along with the prediction that came back. Keep the dashboard open: it refreshes every
+30 seconds and shows the new data.
+
+Other useful commands:
+
+```bash
+python manage.py train_models --api-url http://127.0.0.1:8000   # retrain over HTTP; creates v2, v3...
+python manage.py refresh_predictions                             # recompute all predictions
+```
+
+Common errors:
+
+- `No module named django`: activate the virtual environment with `source .venv/bin/activate`.
+- `Connection refused` from `simulate_incoming` or `train_models`: the server isn't running in the other terminal.
+- `Model has not been trained`: run `python manage.py setup_demo`.
 
 ## API
 
@@ -81,6 +117,14 @@ Authenticate with a logged-in session or the header `X-API-Key: <ANALYTICS_API_K
 | POST | `/api/v1/ingest/screenings/` | Pre-donation check; returns deferral risk and main factors |
 | GET | `/api/v1/predictions/dashboard/` | Everything the dashboard shows |
 | GET | `/api/v1/predictions/donors/<id>/` | One donor's prediction |
+
+### Try the API in your browser
+
+While you're logged in to the app, open these directly in your browser:
+
+- http://127.0.0.1:8000/api/v1/predictions/dashboard/ (everything the dashboard shows)
+- http://127.0.0.1:8000/api/v1/donors/?page_size=5 (the first 5 donors)
+- http://127.0.0.1:8000/api/v1/blood-requests/?since=2026-11-01 (requests since 1 November 2026)
 
 Example:
 
@@ -122,7 +166,7 @@ needed) and models are stored as JSON, not pickle, so loading a model file canno
 ## Running the tests
 
 ```bash
-python3 manage.py test
+python manage.py test
 ```
 
 ## Production settings
