@@ -1,0 +1,32 @@
+# Line endings
+# ------------
+# Store every text file with Unix (LF) line endings and check them out
+# with LF on every operating system. Without this, editors on Windows
+# convert files to CRLF and every line shows up as changed in diffs
+# and merge conflicts.
+* text=auto eol=lf
+
+# Windows-only scripts must keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files: never convert or diff.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.webp   binary
+*.pdf    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
+*.otf    binary
+*.zip    binary
+*.sqlite3 binary
+
+# GitHub language stats: third-party AdminLTE assets are not our code.
+static/** linguist-vendored
+templates/adminlte/pages/** linguist-vendored
