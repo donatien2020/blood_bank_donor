@@ -1,0 +1,120 @@
+{% extends 'adminlte/base.html' %}
+
+{% block title %}{{ trained_model }} | Blood Bank System{% endblock %}
+{% block page_title %}<i class="fas fa-microchip mr-2"></i>{{ trained_model.get_kind_display }} &middot; v{{ trained_model.version }}{% endblock %}
+
+{% block content %}
+{% include 'adminlte/analytics/_messages.html' %}
+
+<div class="mb-3 d-flex justify-content-between flex-wrap">
+  <a href="{% url 'analytics_models' %}" class="btn btn-default"><i class="fas fa-arrow-left mr-1"></i> All models</a>
+  {% if user.is_staff and not trained_model.is_active and not file_missing %}
+  <form method="post" action="{% url 'analytics_model_activate' trained_model.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success"><i class="fas fa-check mr-1"></i> Make this the active version</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card card-primary card-outline">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> About this version</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-sm m-0">
+          <tr><td>Status</td><td>{% if trained_model.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-secondary">Inactive</span>{% endif %}</td></tr>
+          <tr><td>Algorithm</td><td>{% if is_classifier %}Logistic regression{% else %}Ridge regression{% endif %}</td></tr>
+          <tr><td>Trained</td><td>{{ trained_model.trained_at|date:"d M Y H:i" }}</td></tr>
+          <tr><td>Data source</td><td><code class="small">{{ trained_model.data_source }}</code></td></tr>
+          <tr><td>Training samples</td><td>{{ trained_model.train_samples }}</td></tr>
+          <tr><td>Test samples</td><td>{{ trained_model.test_samples }}</td></tr>
+          <tr><td>Model file</td><td><code class="small">ml_models/{{ trained_model.file_name }}</code>{% if file_missing %} <span class="badge badge-danger">missing</span>{% endif %}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-success card-outline">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-check-double mr-1"></i> Test results</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-sm m-0">
+          {% for name, value in metrics.items %}
+          <tr><td><code>{{ name }}</code></td><td class="text-right">{% if value is None %}&ndash;{% else %}{{ value|floatformat:"-4" }}{% endif %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="card-footer small text-muted">
+        {% if is_classifier %}
+        <strong>auc</strong>: chance the model ranks a positive case above a negative one (0.5 = random, 1 = perfect).
+        <strong>precision</strong>: share of flagged cases that were right. <strong>recall</strong>: share of real cases it caught.
+        <strong>brier</strong>: average squared error of the probabilities (lower is better).
+        {% else %}
+        <strong>mae</strong>: average error in units per blood group per week.
+        <strong>baseline_mae</strong>: error of simply assuming "next week = last week". Lower is better.
+        {% endif %}
+      </div>
+    </div>
+
+    {% if confusion %}
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-th mr-1"></i> Confusion matrix (threshold {{ metrics.threshold }})</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-bordered text-center m-0">
+          <tr><th></th><th>Predicted yes</th><th>Predicted no</th></tr>
+          <tr><th>Actually yes</th><td class="table-success">{{ confusion.tp }}</td><td class="table-danger">{{ confusion.fn }}</td></tr>
+          <tr><th>Actually no</th><td class="table-danger">{{ confusion.fp }}</td><td class="table-success">{{ confusion.tn }}</td></tr>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card card-primary card-outline">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-balance-scale mr-1"></i> What the model learned: feature weights</h3></div>
+      <div class="card-body">
+        {% if file_missing %}
+        <div class="alert alert-warning mb-0">The model file is not on this computer (model files are not stored in git). Retrain to create it.</div>
+        {% else %}
+        <p class="text-muted">
+          Each feature is standardised before training, so weights can be compared directly.
+          <span class="text-success"><strong>Green</strong></span> features push the prediction up
+          {% if is_classifier %}(more likely){% else %}(more units){% endif %},
+          <span class="text-danger"><strong>red</strong></span> features push it down. Longer bars matter more.
+        </p>
+        <table class="table table-sm">
+          {% for w in weights %}
+          <tr>
+            <td style="width: 38%">{{ w.label }}<br><code class="small text-muted">{{ w.name }}</code></td>
+            <td style="width: 12%" class="text-right {% if w.weight >= 0 %}text-success{% else %}text-danger{% endif %}">{{ w.weight }}</td>
+            <td>
+              <div class="progress progress-sm mt-2">
+                <div class="progress-bar {% if w.weight >= 0 %}bg-success{% else %}bg-danger{% endif %}" style="width: {{ w.width }}%"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if other_versions %}
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-history mr-1"></i> Other versions</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover m-0">
+          {% for m in other_versions %}
+          <tr>
+            <td><a href="{% url 'analytics_model_detail' m.pk %}">v{{ m.version }}</a></td>
+            <td>{{ m.trained_at|date:"d M Y H:i" }}</td>
+            <td>{% if m.kind == 'DEMAND' %}MAE {{ m.metrics.mae|floatformat:2 }}{% else %}AUC {{ m.metrics.auc|floatformat:3 }}{% endif %}</td>
+            <td>{% if m.is_active %}<span class="badge badge-success">Active</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

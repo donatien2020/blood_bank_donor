@@ -133,6 +133,7 @@
     <div class="card card-primary card-outline">
       <div class="card-header">
         <h3 class="card-title"><i class="fas fa-tint mr-1"></i> Shortage risk by blood group</h3>
+        <div class="card-tools"><a href="{% url 'analytics_forecasts' %}" class="btn btn-tool">Details <i class="fas fa-arrow-right"></i></a></div>
       </div>
       <div class="card-body table-responsive p-0">
         <table class="table table-sm table-striped mb-0">
@@ -165,7 +166,10 @@
     <div class="card card-success card-outline">
       <div class="card-header">
         <h3 class="card-title"><i class="fas fa-phone mr-1"></i> Donors to invite now</h3>
-        <div class="card-tools"><span class="badge badge-light">eligible today, ranked by return likelihood &times; group need</span></div>
+        <div class="card-tools">
+          <span class="badge badge-light d-none d-xl-inline">eligible today, ranked by return likelihood &times; group need</span>
+          <a href="{% url 'analytics_donor_predictions' %}?eligible=1" class="btn btn-tool">View all <i class="fas fa-arrow-right"></i></a>
+        </div>
       </div>
       <div class="card-body table-responsive p-0">
         <table class="table table-sm table-hover mb-0">
@@ -199,6 +203,7 @@
         <h3 class="card-title"><span id="live-dot"></span> Incoming screenings: deferral risk</h3>
         <div class="card-tools">
           <a href="{% url 'screening' %}" class="btn btn-tool"><i class="fas fa-plus"></i> New check</a>
+          <a href="{% url 'analytics_screenings' %}" class="btn btn-tool">History <i class="fas fa-arrow-right"></i></a>
         </div>
       </div>
       <div class="card-body table-responsive p-0">
@@ -212,7 +217,10 @@
   </div>
   <div class="col-lg-5">
     <div class="card">
-      <div class="card-header"><h3 class="card-title"><i class="fas fa-brain mr-1"></i> Deployed models</h3></div>
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-brain mr-1"></i> Deployed models</h3>
+        <div class="card-tools"><a href="{% url 'analytics_models' %}" class="btn btn-tool">Details <i class="fas fa-arrow-right"></i></a></div>
+      </div>
       <div class="card-body" id="model-cards"></div>
     </div>
   </div>
