@@ -1,0 +1,501 @@
+<title>Blood Bank Data Model</title>
+<style>
+  :root{
+    --bg:#faf7f4; --surface:#ffffff; --ink:#221c1a; --muted:#73655f; --line:#e3dad3;
+    --accent:#a81c35; --accent-ink:#ffffff;
+    --core-fill:#eef1f6; --core-line:#9fb0cc; --core-ink:#32415c;
+    --donors-fill:#fdecec; --donors-line:#e3a0a6; --donors-ink:#7a2630;
+    --inventory-fill:#eaf5ee; --inventory-line:#9ccaac; --inventory-ink:#2c5c3c;
+    --analytics-fill:#f1ecfa; --analytics-line:#b5a3dd; --analytics-ink:#4b3a7a; --analytics-rel:#7d68b8;
+    --rel-stroke:#8c8079; --rel-dash:#b36a1c;
+    --code-bg:#f3ede7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#17120f; --surface:#211a16; --ink:#f3ece6; --muted:#b5a79e; --line:#3c322c;
+      --accent:#ff7a8a; --accent-ink:#2a0a10;
+      --core-fill:#202738; --core-line:#5d6f96; --core-ink:#c7d2ea;
+      --donors-fill:#3a2022; --donors-line:#a25059; --donors-ink:#f3c4c9;
+      --inventory-fill:#1c3326; --inventory-line:#5d9472; --inventory-ink:#bfe6cc;
+      --analytics-fill:#2a2340; --analytics-line:#7a68b0; --analytics-ink:#d9cff5; --analytics-rel:#a996e6;
+      --rel-stroke:#aa9d93; --rel-dash:#e2a05a;
+      --code-bg:#241d18;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#17120f; --surface:#211a16; --ink:#f3ece6; --muted:#b5a79e; --line:#3c322c;
+    --accent:#ff7a8a; --accent-ink:#2a0a10;
+    --core-fill:#202738; --core-line:#5d6f96; --core-ink:#c7d2ea;
+    --donors-fill:#3a2022; --donors-line:#a25059; --donors-ink:#f3c4c9;
+    --inventory-fill:#1c3326; --inventory-line:#5d9472; --inventory-ink:#bfe6cc;
+      --analytics-fill:#2a2340; --analytics-line:#7a68b0; --analytics-ink:#d9cff5; --analytics-rel:#a996e6;
+    --rel-stroke:#aa9d93; --rel-dash:#e2a05a;
+    --code-bg:#241d18;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    padding-inline:20px; padding-block:40px 64px;
+    display:flex; justify-content:center;
+  }
+  main{width:100%; max-width:1240px;}
+  .eyebrow{
+    font-family:"IBM Plex Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+    font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--accent); margin:0 0 10px;
+  }
+  h1{
+    font-family:"Fraunces", "DejaVu Serif", Georgia, serif; font-weight:600;
+    font-size:clamp(28px,4vw,40px); line-height:1.1; margin:0 0 14px; text-wrap:balance;
+  }
+  .lede{
+    font-size:16px; line-height:1.6; color:var(--muted); max-width:66ch; margin:0 0 28px;
+  }
+  .legend{
+    display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center;
+    padding:14px 18px; border:1px solid var(--line); border-radius:10px;
+    background:var(--surface); margin-bottom:28px; font-size:13px; color:var(--muted);
+  }
+  .legend b{color:var(--ink); font-weight:600;}
+  .chip{display:inline-flex; align-items:center; gap:7px;}
+  .swatch{width:13px; height:13px; border-radius:3px; border:1px solid var(--line); flex:none;}
+  .swatch.core{background:var(--core-fill); border-color:var(--core-line);}
+  .swatch.donors{background:var(--donors-fill); border-color:var(--donors-line);}
+  .swatch.inventory{background:var(--inventory-fill); border-color:var(--inventory-line);}
+  .swatch.analytics{background:var(--analytics-fill); border-color:var(--analytics-line);}
+  .linekey{display:inline-flex; align-items:center; gap:6px;}
+  .linekey svg{width:28px; height:10px; flex:none;}
+
+  figure{margin:0 0 36px;}
+  .diagram-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:14px; overflow-x:auto;
+  }
+  .diagram-card svg{display:block; width:100%; height:auto; min-width:980px;}
+  figcaption{
+    font-size:13px; color:var(--muted); margin-top:10px; line-height:1.5; max-width:72ch;
+  }
+
+  .entity-box{fill:var(--surface); stroke-width:1.4;}
+  .entity--core .entity-box{fill:var(--core-fill); stroke:var(--core-line);}
+  .entity--donors .entity-box{fill:var(--donors-fill); stroke:var(--donors-line);}
+  .entity--inventory .entity-box{fill:var(--inventory-fill); stroke:var(--inventory-line);}
+  .entity--analytics .entity-box{fill:var(--analytics-fill); stroke:var(--analytics-line);}
+  .entity-title{font:700 14px "IBM Plex Sans", "Inter", "DejaVu Sans", sans-serif;}
+  .entity--core .entity-title{fill:var(--core-ink);}
+  .entity--donors .entity-title{fill:var(--donors-ink);}
+  .entity--inventory .entity-title{fill:var(--inventory-ink);}
+  .entity--analytics .entity-title{fill:var(--analytics-ink);}
+  .new-badge rect{fill:var(--analytics-ink);} .new-badge text{font:700 9.5px "IBM Plex Sans","Inter",sans-serif; fill:#fff; letter-spacing:.06em;}
+  .entity-div{stroke-width:1;}
+  .entity--core .entity-div{stroke:var(--core-line);}
+  .entity--donors .entity-div{stroke:var(--donors-line);}
+  .entity--inventory .entity-div{stroke:var(--inventory-line);}
+  .entity--analytics .entity-div{stroke:var(--analytics-line);}
+  .entity-field{font:12px "IBM Plex Mono", "DejaVu Sans Mono", ui-monospace, monospace; fill:var(--ink);}
+  .pk{fill:var(--accent); font-weight:700;}
+
+  .rel{fill:none; stroke:var(--rel-stroke); stroke-width:1.4;}
+  .rel.dashed{stroke:var(--rel-dash); stroke-dasharray:6 4;}
+  .rel.new{stroke:var(--analytics-rel); stroke-width:1.6;}
+  .rel.new.dashed{stroke-dasharray:6 4;}
+  .rel-label.new{fill:var(--analytics-ink); font-weight:600;}
+  tr.new td{background:var(--analytics-fill);}
+  .rel-label{
+    font:11px "IBM Plex Sans", "Inter", "DejaVu Sans", sans-serif; fill:var(--muted);
+    paint-order:stroke; stroke:var(--surface); stroke-width:5; stroke-linejoin:round;
+  }
+  .rel-label.dashed{fill:var(--rel-dash);}
+
+  table{width:100%; border-collapse:collapse; font-size:14px; background:var(--surface);
+    border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  thead th{
+    text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); background:var(--code-bg); padding:10px 14px; border-bottom:1px solid var(--line);
+  }
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.45;}
+  tbody tr:last-child td{border-bottom:none;}
+  td.rel-name{font-weight:600; white-space:nowrap;}
+  td.card{
+    font-family:"IBM Plex Mono", "DejaVu Sans Mono", ui-monospace, monospace; font-size:12.5px;
+    white-space:nowrap; color:var(--accent);
+  }
+  .table-wrap{overflow-x:auto; margin-bottom:8px;}
+
+  h2{
+    font-family:"Fraunces", "DejaVu Serif", Georgia, serif; font-weight:600; font-size:21px; margin:0 0 4px;
+  }
+  .section-note{font-size:13.5px; color:var(--muted); margin:0 0 16px; max-width:70ch; line-height:1.55;}
+
+  footer{margin-top:40px; padding-top:18px; border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--muted);}
+
+  @media (max-width:640px){
+    .legend{font-size:12px;}
+  }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<main>
+  <p class="eyebrow">Database Design &middot; Final Exam update</p>
+  <h1>Blood Bank Data Model</h1>
+  <p class="lede">
+    Entity–relationship diagram for the Django blood-donor management system. Fourteen entities span
+    four Django apps — <b>core</b> (institutions &amp; staff), <b>donors</b> (donor registry,
+    campaigns, donations, collected units), <b>inventory</b> (requests, issuance, stock
+    thresholds) and the new <b>analytics</b> app (trained models and the predictions they produce) —
+    plus Django's built-in <code>auth.User</code>, which several models reference for
+    accountability (who recorded, handled, issued or screened a record).
+  </p>
+
+  <div class="legend">
+    <span class="chip"><span class="swatch core"></span> core app</span>
+    <span class="chip"><span class="swatch donors"></span> donors app</span>
+    <span class="chip"><span class="swatch inventory"></span> inventory app</span>
+    <span class="chip"><span class="swatch analytics"></span> analytics app (new)</span>
+    <span class="linekey">
+      <svg viewBox="0 0 28 10"><line x1="0" y1="5" x2="28" y2="5" stroke="currentColor" stroke-width="1.6"/></svg>
+      foreign key / relation
+    </span>
+    <span class="linekey">
+      <svg viewBox="0 0 28 10"><line x1="0" y1="5" x2="28" y2="5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="5 3"/></svg>
+      logical link (no FK)
+    </span>
+  </div>
+
+  <figure>
+    <div class="diagram-card">
+      <svg viewBox="0 0 1910 930" role="img" aria-label="Entity relationship diagram of the blood bank system: User, Institution and InstitutionMembership in the core app; Donor, DonationCampaign, Donation and BloodUnit in the donors app; BloodRequest, IssuedUnit and StockThreshold in the inventory app; and TrainedModel, DemandForecast, DonorPrediction and ScreeningCheck in the new analytics app, connected by labelled relationship lines.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--rel-stroke)"/>
+          </marker>
+          <marker id="arrowNew" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--analytics-rel)"/>
+          </marker>
+          <marker id="arrowNewDashed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--analytics-rel)"/>
+          </marker>
+          <marker id="arrowDashed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--rel-dash)"/>
+          </marker>
+        </defs>
+
+        <g transform="translate(0,60)">
+        <!-- ===== Relationship lines (drawn first, under the boxes) ===== -->
+        <!-- R1 User 1:1 InstitutionMembership -->
+        <path class="rel" marker-end="url(#arrow)" d="M 290 58 C 360 58 360 418 290 418"/>
+        <text class="rel-label" x="345" y="248">account (1:1)</text>
+
+        <!-- R2 Institution 1:* InstitutionMembership -->
+        <path class="rel" marker-end="url(#arrow)" d="M 160 326 L 160 362"/>
+        <text class="rel-label" x="186" y="348">staff_members</text>
+
+        <!-- R3 Institution 1:* DonationCampaign -->
+        <path class="rel" marker-end="url(#arrow)" d="M 290 208 Q 420 208 550 288"/>
+        <text class="rel-label" x="392" y="226">organizes</text>
+
+        <!-- R4 User 1:* Donation (recorded_by, optional) -->
+        <path class="rel" marker-end="url(#arrow)" d="M 290 114 C 430 170 430 400 550 448"/>
+        <text class="rel-label" x="420" y="258">recorded_by (opt.)</text>
+
+        <!-- R5 DonationCampaign 1:* Donation (optional) -->
+        <path class="rel" marker-end="url(#arrow)" d="M 680 362 L 680 398"/>
+        <text class="rel-label" x="706" y="384">collected_during</text>
+
+        <!-- R6 Donor 1:* Donation -->
+        <path class="rel" marker-end="url(#arrow)" d="M 550 104 C 478 170 478 420 550 481"/>
+        <text class="rel-label" x="466" y="350">donates</text>
+
+        <!-- R7 Donation 1:1 BloodUnit -->
+        <path class="rel" marker-end="url(#arrow)" d="M 680 564 L 680 600"/>
+        <text class="rel-label" x="706" y="586">produces (1:1)</text>
+
+        <!-- R8 Institution 1:* BloodRequest (requestor) -->
+        <path class="rel" marker-end="url(#arrow)" d="M 290 252 L 312 252 L 312 -2 L 1170 -2 L 1170 28"/>
+        <text class="rel-label" x="900" y="-6">requestor sends</text>
+
+        <!-- R9 Institution 1:* BloodRequest (receiver) -->
+        <path class="rel" marker-end="url(#arrow)" d="M 290 296 L 326 296 L 326 12 L 1230 12 L 1230 28"/>
+        <text class="rel-label" x="900" y="24">receiver fulfils</text>
+
+        <!-- R10 User 1:* BloodRequest (handled_by, optional) -->
+        <path class="rel" marker-end="url(#arrow)" d="M 100 142 L 10 142 L 10 786 L 1350 786 L 1350 113 L 1330 113"/>
+        <text class="rel-label" x="380" y="779">handled_by (opt.)</text>
+
+        <!-- R11 User 1:* IssuedUnit (issued_by, optional) -->
+        <path class="rel" marker-end="url(#arrow)" d="M 220 142 L 4 142 L 4 802 L 1358 802 L 1358 306 L 1330 306"/>
+        <text class="rel-label" x="960" y="795">issued_by (opt.)</text>
+
+        <!-- R12 BloodRequest 1:* IssuedUnit -->
+        <path class="rel" marker-end="url(#arrow)" d="M 1200 196 L 1200 232"/>
+        <text class="rel-label" x="1214" y="218">issues</text>
+
+        <!-- R13 BloodUnit 1:1 IssuedUnit -->
+        <path class="rel" marker-end="url(#arrow)" d="M 810 650 C 940 650 940 306 1070 306"/>
+        <text class="rel-label" x="895" y="482">issued_as (1:1)</text>
+
+        <!-- R14 StockThreshold -> BloodUnit (logical, dashed) -->
+        <path class="rel dashed" marker-end="url(#arrowDashed)" d="M 1070 506 C 940 506 940 716 810 716"/>
+        <text class="rel-label dashed" x="895" y="615">monitors stock by blood_group</text>
+
+        <!-- ===== Entities (core) ===== -->
+        <g class="entity entity--core">
+          <rect class="entity-box" x="30" y="30" width="260" height="112" rx="10"/>
+          <text class="entity-title" x="46" y="52">User <tspan font-weight="400" font-size="10">(auth.User)</tspan></text>
+          <line class="entity-div" x1="30" y1="62" x2="290" y2="62"/>
+          <text class="entity-field" x="46" y="80">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="46" y="98">username (unique)</text>
+          <text class="entity-field" x="46" y="116">is_staff, is_superuser</text>
+        </g>
+
+        <g class="entity entity--core">
+          <rect class="entity-box" x="30" y="178" width="260" height="148" rx="10"/>
+          <text class="entity-title" x="46" y="200">Institution</text>
+          <line class="entity-div" x1="30" y1="210" x2="290" y2="210"/>
+          <text class="entity-field" x="46" y="228">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="46" y="246">name (unique)</text>
+          <text class="entity-field" x="46" y="264">institution_type / category</text>
+          <text class="entity-field" x="46" y="282">district</text>
+          <text class="entity-field" x="46" y="300">is_active</text>
+        </g>
+
+        <g class="entity entity--core">
+          <rect class="entity-box" x="30" y="362" width="260" height="112" rx="10"/>
+          <text class="entity-title" x="46" y="384">InstitutionMembership</text>
+          <line class="entity-div" x1="30" y1="394" x2="290" y2="394"/>
+          <text class="entity-field" x="46" y="412">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="46" y="430">user_id <tspan class="pk">FK</tspan> &#8594; User</text>
+          <text class="entity-field" x="46" y="448">institution_id <tspan class="pk">FK</tspan></text>
+        </g>
+
+        <!-- ===== Entities (donors) ===== -->
+        <g class="entity entity--donors">
+          <rect class="entity-box" x="550" y="30" width="260" height="148" rx="10"/>
+          <text class="entity-title" x="566" y="52">Donor</text>
+          <line class="entity-div" x1="550" y1="62" x2="810" y2="62"/>
+          <text class="entity-field" x="566" y="80">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="566" y="98">national_id (unique)</text>
+          <text class="entity-field" x="566" y="116">first_name, last_name</text>
+          <text class="entity-field" x="566" y="134">blood_group</text>
+          <text class="entity-field" x="566" y="152">is_active</text>
+        </g>
+
+        <g class="entity entity--donors">
+          <rect class="entity-box" x="550" y="214" width="260" height="148" rx="10"/>
+          <text class="entity-title" x="566" y="236">DonationCampaign</text>
+          <line class="entity-div" x1="550" y1="246" x2="810" y2="246"/>
+          <text class="entity-field" x="566" y="264">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="566" y="282">institution_id <tspan class="pk">FK</tspan></text>
+          <text class="entity-field" x="566" y="300">name</text>
+          <text class="entity-field" x="566" y="318">start_date, end_date</text>
+          <text class="entity-field" x="566" y="336">status</text>
+        </g>
+
+        <g class="entity entity--donors">
+          <rect class="entity-box" x="550" y="398" width="260" height="166" rx="10"/>
+          <text class="entity-title" x="566" y="420">Donation</text>
+          <line class="entity-div" x1="550" y1="430" x2="810" y2="430"/>
+          <text class="entity-field" x="566" y="448">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="566" y="466">donor_id <tspan class="pk">FK</tspan></text>
+          <text class="entity-field" x="566" y="484">campaign_id <tspan class="pk">FK</tspan> (null)</text>
+          <text class="entity-field" x="566" y="502">recorded_by_id <tspan class="pk">FK</tspan>&#8594;User (null)</text>
+          <text class="entity-field" x="566" y="520">donation_date</text>
+          <text class="entity-field" x="566" y="538">outcome</text>
+        </g>
+
+        <g class="entity entity--donors">
+          <rect class="entity-box" x="550" y="600" width="260" height="166" rx="10"/>
+          <text class="entity-title" x="566" y="622">BloodUnit</text>
+          <line class="entity-div" x1="550" y1="632" x2="810" y2="632"/>
+          <text class="entity-field" x="566" y="650">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="566" y="668">donation_id <tspan class="pk">FK</tspan> (unique)</text>
+          <text class="entity-field" x="566" y="686">unit_number (unique)</text>
+          <text class="entity-field" x="566" y="704">blood_group, component</text>
+          <text class="entity-field" x="566" y="722">status, test_result</text>
+          <text class="entity-field" x="566" y="740">expiry_date</text>
+        </g>
+
+        <!-- ===== Entities (inventory) ===== -->
+        <g class="entity entity--inventory">
+          <rect class="entity-box" x="1070" y="30" width="260" height="166" rx="10"/>
+          <text class="entity-title" x="1086" y="52">BloodRequest</text>
+          <line class="entity-div" x1="1070" y1="62" x2="1330" y2="62"/>
+          <text class="entity-field" x="1086" y="80">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="1086" y="98">requestor_id <tspan class="pk">FK</tspan>&#8594;Inst.</text>
+          <text class="entity-field" x="1086" y="116">receiver_id <tspan class="pk">FK</tspan>&#8594;Inst.</text>
+          <text class="entity-field" x="1086" y="134">handled_by_id <tspan class="pk">FK</tspan>&#8594;User (null)</text>
+          <text class="entity-field" x="1086" y="152">blood_group, component, qty</text>
+          <text class="entity-field" x="1086" y="170">status, urgency</text>
+        </g>
+
+        <g class="entity entity--inventory">
+          <rect class="entity-box" x="1070" y="232" width="260" height="148" rx="10"/>
+          <text class="entity-title" x="1086" y="254">IssuedUnit</text>
+          <line class="entity-div" x1="1070" y1="264" x2="1330" y2="264"/>
+          <text class="entity-field" x="1086" y="282">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="1086" y="300">request_id <tspan class="pk">FK</tspan></text>
+          <text class="entity-field" x="1086" y="318">blood_unit_id <tspan class="pk">FK</tspan> (unique)</text>
+          <text class="entity-field" x="1086" y="336">issued_by_id <tspan class="pk">FK</tspan>&#8594;User (null)</text>
+          <text class="entity-field" x="1086" y="354">issued_date</text>
+        </g>
+
+        <g class="entity entity--inventory">
+          <rect class="entity-box" x="1070" y="450" width="260" height="112" rx="10"/>
+          <text class="entity-title" x="1086" y="472">StockThreshold</text>
+          <line class="entity-div" x1="1070" y1="482" x2="1330" y2="482"/>
+          <text class="entity-field" x="1086" y="500">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="1086" y="518">blood_group (unique)</text>
+          <text class="entity-field" x="1086" y="536">minimum_units</text>
+        </g>
+        </g>
+
+        <!-- ===== Analytics app (new): relationship lines, absolute coordinates ===== -->
+        <!-- A1 Donor 1:1 DonorPrediction -->
+        <path class="rel new" marker-end="url(#arrowNew)" d="M 700 90 L 700 16 L 1735 16 L 1735 88"/>
+        <text class="rel-label new" x="1180" y="12">scored as (1:1)</text>
+
+        <!-- A2 Donor 1:* ScreeningCheck -->
+        <path class="rel new" marker-end="url(#arrowNew)" d="M 760 90 L 760 34 L 1545 34 L 1545 330 L 1588 330"/>
+        <text class="rel-label new" x="1450" y="30">screened (1:*)</text>
+
+        <!-- A3 User 1:* ScreeningCheck (created_by, optional) -->
+        <path class="rel new" marker-end="url(#arrowNew)" d="M 30 190 L 18 190 L 18 905 L 1560 905 L 1560 375 L 1588 375"/>
+        <text class="rel-label new" x="1020" y="898">created_by (opt.)</text>
+
+        <!-- A4-A6 TrainedModel 1:* predictions (model, optional) -->
+        <path class="rel new" marker-end="url(#arrowNew)" d="M 1880 520 L 1896 520 L 1896 150 L 1882 150"/>
+        <path class="rel new" marker-end="url(#arrowNew)" d="M 1880 535 L 1896 535 L 1896 340 L 1882 340"/>
+        <path class="rel new" marker-end="url(#arrowNew)" d="M 1880 550 L 1896 550 L 1896 715 L 1882 715"/>
+        <text class="rel-label new" x="1902" y="628" transform="rotate(90 1902 628)" text-anchor="middle">predicted_by (opt.)</text>
+        <text class="rel-label new" x="1902" y="248" transform="rotate(90 1902 248)" text-anchor="middle">predicted_by (opt.)</text>
+
+        <!-- A7 DemandForecast -> BloodRequest (logical) -->
+        <path class="rel new dashed" marker-end="url(#arrowNewDashed)" d="M 1590 690 L 1470 690 L 1470 240 L 1332 240"/>
+        <text class="rel-label new" x="1372" y="470">learns demand</text>
+        <text class="rel-label new" x="1372" y="484">by blood_group</text>
+
+        <!-- A8 DemandForecast -> BloodUnit (logical: compares with stock) -->
+        <path class="rel new dashed" marker-end="url(#arrowNewDashed)" d="M 1590 760 L 1440 760 L 1440 790 L 812 790"/>
+        <text class="rel-label new" x="1078" y="782">compares with stock by blood_group</text>
+
+        <!-- ===== Entities (analytics, new) ===== -->
+        <g class="entity entity--analytics">
+          <rect class="entity-box" x="1590" y="90" width="290" height="148" rx="10"/>
+          <text class="entity-title" x="1606" y="112">DonorPrediction</text>
+          <g class="new-badge"><rect x="1830" y="99" width="38" height="17" rx="4"/><text x="1837" y="111.5">NEW</text></g>
+          <line class="entity-div" x1="1590" y1="122" x2="1880" y2="122"/>
+          <text class="entity-field" x="1606" y="140">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="1606" y="158">donor_id <tspan class="pk">FK</tspan> (unique)</text>
+          <text class="entity-field" x="1606" y="176">model_id <tspan class="pk">FK</tspan>&#8594;TrainedModel (null)</text>
+          <text class="entity-field" x="1606" y="194">return_probability</text>
+          <text class="entity-field" x="1606" y="212">updated_at</text>
+        </g>
+        <g class="entity entity--analytics">
+          <rect class="entity-box" x="1590" y="262" width="290" height="166" rx="10"/>
+          <text class="entity-title" x="1606" y="284">ScreeningCheck</text>
+          <g class="new-badge"><rect x="1830" y="271" width="38" height="17" rx="4"/><text x="1837" y="283.5">NEW</text></g>
+          <line class="entity-div" x1="1590" y1="294" x2="1880" y2="294"/>
+          <text class="entity-field" x="1606" y="312">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="1606" y="330">donor_id <tspan class="pk">FK</tspan></text>
+          <text class="entity-field" x="1606" y="348">model_id <tspan class="pk">FK</tspan>&#8594;TrainedModel (null)</text>
+          <text class="entity-field" x="1606" y="366">created_by_id <tspan class="pk">FK</tspan>&#8594;User (null)</text>
+          <text class="entity-field" x="1606" y="384">systolic_bp, diastolic_bp</text>
+          <text class="entity-field" x="1606" y="402">deferral_risk, risk_level</text>
+        </g>
+        <g class="entity entity--analytics">
+          <rect class="entity-box" x="1590" y="470" width="290" height="148" rx="10"/>
+          <text class="entity-title" x="1606" y="492">TrainedModel</text>
+          <g class="new-badge"><rect x="1830" y="479" width="38" height="17" rx="4"/><text x="1837" y="491.5">NEW</text></g>
+          <line class="entity-div" x1="1590" y1="502" x2="1880" y2="502"/>
+          <text class="entity-field" x="1606" y="520">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="1606" y="538">kind, version (unique pair)</text>
+          <text class="entity-field" x="1606" y="556">file_name, data_source</text>
+          <text class="entity-field" x="1606" y="574">train / test samples</text>
+          <text class="entity-field" x="1606" y="592">metrics (JSON), is_active</text>
+        </g>
+        <g class="entity entity--analytics">
+          <rect class="entity-box" x="1590" y="642" width="290" height="166" rx="10"/>
+          <text class="entity-title" x="1606" y="664">DemandForecast</text>
+          <g class="new-badge"><rect x="1830" y="651" width="38" height="17" rx="4"/><text x="1837" y="663.5">NEW</text></g>
+          <line class="entity-div" x1="1590" y1="674" x2="1880" y2="674"/>
+          <text class="entity-field" x="1606" y="692">id <tspan class="pk">PK</tspan></text>
+          <text class="entity-field" x="1606" y="710">model_id <tspan class="pk">FK</tspan>&#8594;TrainedModel (null)</text>
+          <text class="entity-field" x="1606" y="728">blood_group (unique)</text>
+          <text class="entity-field" x="1606" y="746">predicted_units, horizon_days</text>
+          <text class="entity-field" x="1606" y="764">available / expiring units</text>
+          <text class="entity-field" x="1606" y="782">shortfall_units, risk_level</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>
+      Figure 1. Fourteen entities across <b>core</b>, <b>donors</b>, <b>inventory</b> and the new
+      <b>analytics</b> app (purple, marked NEW), plus Django's built-in <code>auth.User</code>. Solid
+      arrows are real foreign-key / one-to-one relationships; dashed arrows are logical links only —
+      records are matched on <code>blood_group</code> at query time, with no database foreign key.
+    </figcaption>
+  </figure>
+
+  <h2>Relationships &amp; cardinality</h2>
+  <p class="section-note">
+    Every relationship below is implemented as a Django <code>ForeignKey</code> or
+    <code>OneToOneField</code> (see field names in the diagram), except the last row, which is a
+    shared lookup key rather than a database relationship. Rows shaded purple were added for the
+    final exam (analytics app).
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Relationship</th><th>Cardinality</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="rel-name">User &#8594; InstitutionMembership</td><td class="card">1 : 1</td>
+          <td>A staff account is linked to at most one institution membership record (<code>OneToOneField</code>).</td></tr>
+        <tr><td class="rel-name">Institution &#8594; InstitutionMembership</td><td class="card">1 : *</td>
+          <td>One institution has many staff members attached via their memberships.</td></tr>
+        <tr><td class="rel-name">Institution &#8594; DonationCampaign</td><td class="card">1 : *</td>
+          <td>An institution organises many donation campaigns over time.</td></tr>
+        <tr><td class="rel-name">Donor &#8594; Donation</td><td class="card">1 : *</td>
+          <td>A donor can make many donations (subject to the 56-day eligibility rule enforced in code).</td></tr>
+        <tr><td class="rel-name">DonationCampaign &#8594; Donation</td><td class="card">1 : * (optional)</td>
+          <td>A campaign can group many donations; a donation may also be unlinked to any campaign (<code>null=True</code>).</td></tr>
+        <tr><td class="rel-name">User &#8594; Donation</td><td class="card">1 : * (optional)</td>
+          <td>The staff member who recorded a donation; nullable so historical records survive a user's removal.</td></tr>
+        <tr><td class="rel-name">Donation &#8594; BloodUnit</td><td class="card">1 : 1</td>
+          <td>A collected donation produces exactly one trackable blood unit (<code>OneToOneField</code>); a deferred donation produces none.</td></tr>
+        <tr><td class="rel-name">Institution &#8594; BloodRequest <em>(requestor)</em></td><td class="card">1 : *</td>
+          <td>The institution that sends a blood request (usually a hospital).</td></tr>
+        <tr><td class="rel-name">Institution &#8594; BloodRequest <em>(receiver)</em></td><td class="card">1 : *</td>
+          <td>The institution asked to fulfil the request (usually the blood bank) — a second, independent foreign key to the same model.</td></tr>
+        <tr><td class="rel-name">User &#8594; BloodRequest</td><td class="card">1 : * (optional)</td>
+          <td>The staff member who handled/triaged the request.</td></tr>
+        <tr><td class="rel-name">BloodRequest &#8594; IssuedUnit</td><td class="card">1 : *</td>
+          <td>A request can be fulfilled by issuing several individual units against it.</td></tr>
+        <tr><td class="rel-name">BloodUnit &#8594; IssuedUnit</td><td class="card">1 : 1</td>
+          <td>Once a specific unit is issued it is linked to exactly one issuance record (<code>OneToOneField</code>) and cannot be issued twice.</td></tr>
+        <tr><td class="rel-name">User &#8594; IssuedUnit</td><td class="card">1 : * (optional)</td>
+          <td>The staff member who physically released the unit.</td></tr>
+        <tr class="new"><td class="rel-name">Donor &#8594; DonorPrediction</td><td class="card">1 : 1</td>
+          <td>Each donor who has donated has one current return-likelihood prediction (<code>OneToOneField</code>), refreshed after every new donation.</td></tr>
+        <tr class="new"><td class="rel-name">Donor &#8594; ScreeningCheck</td><td class="card">1 : *</td>
+          <td>A donor can be screened many times; each screening stores the predicted deferral risk.</td></tr>
+        <tr class="new"><td class="rel-name">User &#8594; ScreeningCheck</td><td class="card">1 : * (optional)</td>
+          <td>The staff member who ran the screening; empty when it arrived through the API.</td></tr>
+        <tr class="new"><td class="rel-name">TrainedModel &#8594; DemandForecast</td><td class="card">1 : * (optional)</td>
+          <td>The model version that produced the forecast (<code>SET_NULL</code>, so old versions can be deleted).</td></tr>
+        <tr class="new"><td class="rel-name">TrainedModel &#8594; DonorPrediction</td><td class="card">1 : * (optional)</td>
+          <td>The model version that scored the donor.</td></tr>
+        <tr class="new"><td class="rel-name">TrainedModel &#8594; ScreeningCheck</td><td class="card">1 : * (optional)</td>
+          <td>The model version that predicted the deferral risk.</td></tr>
+        <tr class="new"><td class="rel-name">DemandForecast &#8674; BloodRequest</td><td class="card">logical</td>
+          <td>The forecast for a blood group is computed from that group's recent <code>BloodRequest</code> history.</td></tr>
+        <tr class="new"><td class="rel-name">DemandForecast &#8674; BloodUnit</td><td class="card">logical</td>
+          <td>The forecast is compared with available, unexpired <code>BloodUnit</code> stock of the same group to grade shortage risk.</td></tr>
+        <tr><td class="rel-name">StockThreshold &#8674; BloodUnit</td><td class="card">logical</td>
+          <td>Not a foreign key — each threshold row is compared at query time against available <code>BloodUnit</code> rows sharing the same <code>blood_group</code> to drive the dashboard's low-stock alerts.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>

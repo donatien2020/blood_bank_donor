@@ -1,0 +1,127 @@
+{% extends 'adminlte/base.html' %}
+
+{% block title %}Screening Checks | Blood Bank System{% endblock %}
+{% block page_title %}<i class="fas fa-clipboard-list mr-2"></i>Screening Checks{% endblock %}
+
+{% block content %}
+{% include 'adminlte/analytics/_messages.html' %}
+
+<div class="callout callout-danger">
+  <div class="d-flex justify-content-between align-items-start flex-wrap">
+    <p class="mb-1 mr-3" style="max-width: 780px;">
+      Every <strong>pre-donation screening</strong> scored by the <strong>deferral risk model</strong>:
+      the chance a visit ends in deferral, estimated from blood pressure, weight, age and past
+      donations before the haemoglobin test. Screenings come from the web form, the API
+      (<code>/api/v1/ingest/screenings/</code>) and the simulator.
+    </p>
+    <a href="{% url 'screening' %}" class="btn btn-danger elevation-2 text-white" style="text-decoration: none;"><i class="fas fa-stethoscope mr-1"></i> New Screening Check</a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-3 col-6">
+    <div class="info-box"><span class="info-box-icon bg-secondary"><i class="fas fa-clipboard-list"></i></span>
+      <div class="info-box-content"><span class="info-box-text">All screenings</span><span class="info-box-number">{{ total }}</span></div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="?risk=HIGH" class="text-dark"><div class="info-box"><span class="info-box-icon bg-danger"><i class="fas fa-exclamation"></i></span>
+      <div class="info-box-content"><span class="info-box-text">High risk (70%+)</span><span class="info-box-number">{{ summary.HIGH }}</span></div></div></a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="?risk=MEDIUM" class="text-dark"><div class="info-box"><span class="info-box-icon bg-warning"><i class="fas fa-minus"></i></span>
+      <div class="info-box-content"><span class="info-box-text">Medium risk (40-70%)</span><span class="info-box-number">{{ summary.MEDIUM }}</span></div></div></a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="?risk=LOW" class="text-dark"><div class="info-box"><span class="info-box-icon bg-success"><i class="fas fa-check"></i></span>
+      <div class="info-box-content"><span class="info-box-text">Low risk (&lt;40%)</span><span class="info-box-number">{{ summary.LOW }}</span></div></div></a>
+  </div>
+</div>
+
+<div class="card card-primary card-outline">
+  <div class="card-header"><h3 class="card-title"><i class="fas fa-search mr-1"></i> Filter screenings</h3></div>
+  <div class="card-body">
+    <form method="GET" action="">
+      <div class="row">
+        <div class="col-md-4 mb-2">
+          <input type="text" name="search" class="form-control" placeholder="Donor name or national ID..." value="{{ request.GET.search|default:'' }}">
+        </div>
+        <div class="col-md-3 mb-2">
+          <select name="risk" class="form-control">
+            <option value="">-- Any risk level --</option>
+            {% for value, label in risk_levels %}<option value="{{ value }}" {% if request.GET.risk == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 mb-2">
+          <select name="source" class="form-control">
+            <option value="">-- Any source --</option>
+            {% for s in sources %}<option value="{{ s }}" {% if request.GET.source == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 mb-2"><button type="submit" class="btn btn-primary btn-block">Apply Filters</button></div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3 class="card-title">{{ paginator.count }} screening{{ paginator.count|pluralize }}</h3></div>
+  <div class="card-body table-responsive p-0">
+    <table class="table table-striped table-hover m-0">
+      <thead>
+      <tr>
+        <th>Date</th>
+        <th>Donor</th>
+        <th>Blood pressure</th>
+        <th>Weight</th>
+        <th>Deferral risk</th>
+        <th>Main factors</th>
+        <th>Source</th>
+        <th>Recorded by</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for s in screenings %}
+      <tr>
+        <td>{{ s.created_at|date:"d M Y" }}<br><small class="text-muted">{{ s.created_at|date:"H:i" }}</small></td>
+        <td>
+          <a href="{% url 'donor_profile' s.donor.pk %}"><strong>{{ s.donor.first_name }} {{ s.donor.last_name }}</strong></a>
+          <span class="badge badge-danger">{{ s.donor.blood_group }}</span><br><code class="small">{{ s.donor.national_id }}</code>
+        </td>
+        <td>{{ s.systolic_bp }}/{{ s.diastolic_bp }}</td>
+        <td>{{ s.weight_kg }} kg</td>
+        <td>
+          <span class="badge {% if s.risk_level == 'HIGH' %}badge-danger{% elif s.risk_level == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %}">{{ s.get_risk_level_display }}</span>
+          <strong>{% widthratio s.deferral_risk 1 100 %}%</strong>
+        </td>
+        <td>
+          {% for f in s.top_factors %}<span class="badge badge-light">{{ f.label }}</span> {% empty %}<span class="text-muted">&ndash;</span>{% endfor %}
+        </td>
+        <td class="text-muted">{{ s.source }}</td>
+        <td class="text-muted">{{ s.created_by.username|default:"API" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-center text-muted p-4">
+        {% if total %}No screenings match these filters.{% else %}No screenings yet. Use <a href="{% url 'screening' %}">New Screening Check</a>.{% endif %}
+      </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+  <div class="card-footer clearfix">
+    <span class="text-muted">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+    <ul class="pagination pagination-sm m-0 float-right">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?{{ query }}&page=1">&laquo; First</a></li>
+      <li class="page-item"><a class="page-link" href="?{{ query }}&page={{ page_obj.previous_page_number }}">&lsaquo;</a></li>
+      {% endif %}
+      <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?{{ query }}&page={{ page_obj.next_page_number }}">&rsaquo;</a></li>
+      <li class="page-item"><a class="page-link" href="?{{ query }}&page={{ paginator.num_pages }}">Last &raquo;</a></li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
