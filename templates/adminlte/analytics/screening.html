@@ -15,7 +15,7 @@
       <form method="post">
         {% csrf_token %}
         <div class="card-body">
-          <p class="text-muted">Enter the donor's vitals before the haemoglobin test. The deferral-risk model estimates how likely this visit is to end in a deferral.</p>
+          <p class="text-muted">Enter the donor's vitals before the haemoglobin test. The deferral-risk model estimates how likely this visit is to end in a deferral Hospital</p>
           {% for field in form %}
           <div class="form-group">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
