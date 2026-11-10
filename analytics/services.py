@@ -273,8 +273,11 @@ def _years_before(day, years):
         return day.replace(year=day.year - years, day=28)
 
 
-def _eligible_donor_filter(today):
-    """Active donors aged 18-65 with no collected donation in the last 56 days."""
+def eligible_donor_filter(today):
+    """Active donors aged 18-65 with no collected donation in the last 56 days.
+
+    Use on donor_prediction_queryset(), which provides `last_collected`.
+    """
     oldest = _years_before(today, 66) + timedelta(days=1)
     youngest = _years_before(today, 18)
     return Q(
@@ -300,16 +303,21 @@ def _donor_row(prediction, priority=None):
     }
 
 
+def donor_prediction_queryset():
+    """Donor predictions with each donor's last donation date and donation count."""
+    return DonorPrediction.objects.select_related("donor", "model").annotate(
+        last_collected=Max("donor__donations__donation_date", filter=Q(donor__donations__outcome=DonationOutcome.COLLECTED)),
+        collected_count=Count("donor__donations", filter=Q(donor__donations__outcome=DonationOutcome.COLLECTED)),
+    )
+
+
 def donor_targets(forecasts):
     """Donors to invite now, boosted when their blood group is short."""
     today = timezone.localdate()
     boost = {RiskLevel.HIGH: 1.5, RiskLevel.MEDIUM: 1.25, RiskLevel.LOW: 1.0}
     group_boost = {g: boost[f["risk_level"]] for g, f in forecasts.items()}
-    qs = DonorPrediction.objects.select_related("donor").annotate(
-        last_collected=Max("donor__donations__donation_date", filter=Q(donor__donations__outcome=DonationOutcome.COLLECTED)),
-        collected_count=Count("donor__donations", filter=Q(donor__donations__outcome=DonationOutcome.COLLECTED)),
-    )
-    candidates = list(qs.filter(_eligible_donor_filter(today)).order_by("-return_probability")[:300])
+    qs = donor_prediction_queryset()
+    candidates = list(qs.filter(eligible_donor_filter(today)).order_by("-return_probability")[:300])
     ranked = sorted(
         candidates,
         key=lambda p: p.return_probability * group_boost.get(p.donor.blood_group, 1.0),
